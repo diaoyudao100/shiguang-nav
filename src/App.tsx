@@ -111,7 +111,7 @@ function Shell() {
               </button>
             </div>
             <div className="mt-5 text-center tracking-wide">
-              {data.settings.siteTitle?.trim() || '拾光导航'} · v2.0.0 · 本地优先，数据尽在掌控
+              {data.settings.siteTitle?.trim() || '拾光导航'} · v2.1.0 · 本地优先，数据尽在掌控
             </div>
           </footer>
         </main>

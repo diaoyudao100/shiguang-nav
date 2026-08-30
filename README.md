@@ -18,6 +18,11 @@
 - **云端同步**：每用户数据存 D1（`user_data` 表按用户隔离），本地改动防抖 2.5s 推送、登录时自动拉取、关页面前 sendBeacon 兜底；未登录仍可纯本地使用，同一浏览器按账户隔离本地缓存
 - 会话为 HttpOnly Cookie + HS256 JWT（30 天），密码 PBKDF2-SHA256 哈希，写操作校验 SameSite/Origin
 
+### AI 助手
+- 支持 **OpenAI Compatible / Gemini** 提供商：BASE URL 留空或只填域名即自动补全版本段，可一键测试连接、从提供商**拉取模型列表**选择
+- 添加链接时 **AI 一键生成简介**；设置里可**批量补全**所有缺失描述
+- AI 请求经 Worker 同源代理转发（Key 仅透传不落库，不受浏览器跨域限制）；所选模型不被提供商支持时**自动拉模型列表换用轻量对话模型重试并回写**，推理模型的 `<think>` / reasoning_content 均做了兼容
+
 ### 浏览器扩展 · 一键收藏（v2.1 新增）
 在任意网页**一键收藏到导航站**：点扩展图标、按 `Alt+S` 或右键菜单，会弹出**确认小窗**——
 
@@ -29,6 +34,8 @@
 1. 打开 `chrome://extensions`（Edge / Comet 等 Chromium 内核同理）→ 开启「开发者模式」
 2. 「加载已解压的扩展程序」→ 选择本项目的 `extension/` 目录
 3. 打开扩展「选项」→ 确认站点地址、粘贴连接码 → 保存，点「测试连接」验证
+
+扩展换域名 / 打包 zip / 上架 Chrome 商店（含可粘贴的商品文案）见 [extension/README.md](extension/README.md)；扩展代码更新后需在 `chrome://extensions` 点刷新（或重启浏览器）重新加载。
 
 ## 🚀 部署到 Cloudflare
 
@@ -42,7 +49,7 @@ npx wrangler d1 create shiguang-nav
 npm run cf:db:init
 
 # 2b. 老库升级（2026-08-30 前建过表的执行一次；新库跳过）
-npx wrangler d1 execute shiguang-nav --remote --command "ALTER TABLE users ADD COLUMN device_token_ver INTEGER NOT NULL DEFAULT 0"
+npx wrangler d1 execute shiguang-nav --remote --command "ALTER TABLE users ADD COLUMN device_token_ver INTEGER NOT NULL DEFAULT 0; ALTER TABLE users ADD COLUMN device_code_hash TEXT; ALTER TABLE users ADD COLUMN device_code_expires_at INTEGER; CREATE UNIQUE INDEX IF NOT EXISTS idx_users_device_code_hash ON users(device_code_hash);"
 
 # 3. 配置会话密钥（必填）
 npx wrangler secret put JWT_SECRET   # 输入一串长随机字符
@@ -86,8 +93,10 @@ npm run cf:dev              # 构建并启动 Worker（http://localhost:8787，�
 ## 📁 结构
 
 ```
-├── worker/          # Cloudflare Worker：index(路由) auth(会话/OAuth) oauth(提供商)
-│                    # admin(后台) data(同步) crypto(JWT/PBKDF2) util
+├── worker/          # Cloudflare Worker：index(路由) auth(会话/OAuth/连接码认证)
+│                    # oauth(提供商) admin(后台) data(同步) ai(AI代理+模型自动纠正)
+│                    # quickadd(一键收藏/连接码) crypto(JWT/PBKDF2/码指纹) util
+├── extension/       # 浏览器扩展（MV3）：确认收藏窗 + 选项页，见 extension/README.md
 ├── schema.sql       # D1 表结构：users / oauth_identities / invite_codes / user_data
 ├── src/
 │   ├── pages/       # AuthPage(登录注册) AdminPage(管理后台)
@@ -95,12 +104,14 @@ npm run cf:dev              # 构建并启动 Worker（http://localhost:8787，�
 │   ├── lib/         # api storage bookmarks(书签导入导出) search favicon ai quotes router
 │   └── components/  # Header Sidebar Hero Sections SiteCard AccountMenu 各弹窗
 ├── wrangler.jsonc
-└── scripts/         # 书签解析单测
+└── scripts/         # 书签解析单测 / mock LLM(测试AI链路) / 扩展图标生成
 ```
 
 ## 🔐 安全说明
 
 - 仅供内部小范围使用：邀请码是唯一准入门槛，请勿用于公开服务
+- 扩展连接码只存 SHA-256 指纹（掺站点密钥），明码不落库；支持自定义或随机，随时重新生成作废。自定义码强度由自己负责（≥8 位，建议用别人猜不到的短语）
+- AI KEY 仅在请求中透传给提供商，不写入数据库；页面数据仅存你自己的 D1 与浏览器本地
 - 密码哈希迭代次数为兼容 Workers 免费版 10ms CPU 限制设为 12,000，付费版可调高（`worker/crypto.ts`）
 - 同一浏览器多账户共享 localStorage 空间，本应用已按账户隔离本地缓存，但对隐私要求高时建议不同账户使用不同浏览器配置
 

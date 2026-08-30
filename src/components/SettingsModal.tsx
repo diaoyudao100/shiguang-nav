@@ -797,7 +797,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
               </div>
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{form.siteTitle || '拾光导航'}</div>
-                <div className="mt-0.5 text-xs text-ink2">v2.0.0 · 个人网址导航</div>
+                <div className="mt-0.5 text-xs text-ink2">v2.1.0 · 个人网址导航</div>
               </div>
               <a
                 href="https://github.com"
