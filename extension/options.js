@@ -17,27 +17,12 @@ async function refreshPermission() {
   $('permRow').hidden = granted
 }
 
-async function renderQueue() {
-  const { queue = [] } = await chrome.storage.local.get('queue')
-  $('queueCount').textContent = String(queue.length)
-  $('queueEmpty').hidden = queue.length > 0
-  $('syncBtn').disabled = $('clearBtn').disabled = queue.length === 0
-  const list = $('queueList')
-  list.innerHTML = ''
-  for (const q of queue.slice().reverse().slice(0, 20)) {
-    const li = document.createElement('li')
-    li.textContent = `${q.title || q.url}（${new Date(q.ts).toLocaleString()}）`
-    list.appendChild(li)
-  }
-}
-
 async function init() {
   const { siteUrl, token, quiet } = await chrome.storage.local.get({ siteUrl: DEFAULT_SITE, token: '', quiet: false })
   $('siteUrl').value = siteUrl
   $('token').value = token
   $('quiet').checked = quiet
   await refreshPermission()
-  await renderQueue()
 }
 
 $('saveBtn').addEventListener('click', async () => {
@@ -93,19 +78,6 @@ $('grantBtn').addEventListener('click', async () => {
     /* 拒绝则保持提示 */
   }
   await refreshPermission()
-})
-
-$('syncBtn').addEventListener('click', () => {
-  $('syncBtn').disabled = true
-  chrome.runtime.sendMessage({ type: 'flush' })
-  setTimeout(renderQueue, 1500)
-  setTimeout(renderQueue, 4000)
-})
-
-$('clearBtn').addEventListener('click', async () => {
-  await chrome.storage.local.set({ queue: [] })
-  chrome.runtime.sendMessage({ type: 'queue-changed' })
-  await renderQueue()
 })
 
 init()

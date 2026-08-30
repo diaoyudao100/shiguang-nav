@@ -20,7 +20,14 @@ import {
 } from './admin'
 import { handleGetData, handlePutData } from './data'
 import { handleAiChat, handleAiModels } from './ai'
-import { handleDeviceCheck, handleDeviceToken, handleQuickAdd } from './quickadd'
+import {
+  handleCategories,
+  handleDeviceCheck,
+  handleDeviceToken,
+  handleQuickAdd,
+  handleQuickSuggest,
+  preflight,
+} from './quickadd'
 import { fail } from './util'
 import type { Env } from './util'
 
@@ -62,9 +69,15 @@ export default {
       // 浏览器扩展：一键收藏（Bearer 连接码或会话认证）
       if (path === '/api/device-token' && method === 'POST') return await handleDeviceToken(req, env)
       if (path === '/api/device-check' && method === 'GET') return await handleDeviceCheck(req, env)
-      if (path === '/api/quick-add' && (method === 'POST' || method === 'OPTIONS')) {
-        return await handleQuickAdd(req, env)
+      if (
+        (path === '/api/quick-add' || path === '/api/quick-suggest' || path === '/api/categories') &&
+        method === 'OPTIONS'
+      ) {
+        return preflight(req)
       }
+      if (path === '/api/quick-add' && method === 'POST') return await handleQuickAdd(req, env)
+      if (path === '/api/quick-suggest' && method === 'POST') return await handleQuickSuggest(req, env)
+      if (path === '/api/categories' && method === 'GET') return await handleCategories(req, env)
 
       // 管理后台
       if (path === '/api/admin/overview' && method === 'GET') return await handleAdminOverview(req, env)

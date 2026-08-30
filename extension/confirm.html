@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>拾光导航 · 确认收藏</title>
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 18px 18px 16px;
+        font: 14px/1.6 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
+        color: #27272a;
+        background: #fafafa;
+      }
+      h1 { font-size: 14px; margin: 0 0 14px; display: flex; align-items: center; gap: 8px; }
+      h1 .logo {
+        width: 24px; height: 24px; border-radius: 7px; flex: none;
+        background: linear-gradient(135deg, #5b5ce2, #8b5cf6);
+        display: inline-flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 12px;
+      }
+      .url {
+        font-size: 11px; color: #a1a1aa; margin: -8px 0 12px;
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      }
+      label { display: block; font-size: 12px; color: #52525b; margin: 10px 0 4px; }
+      input[type='text'], textarea, select {
+        width: 100%; padding: 8px 12px;
+        border: 1px solid #d4d4d8; border-radius: 10px;
+        font-size: 13px; outline: none; background: #fff; font-family: inherit;
+      }
+      input:focus, textarea:focus, select:focus { border-color: #5b5ce2; }
+      textarea { resize: none; height: 56px; }
+      .hint { font-size: 11px; color: #71717a; margin-top: 4px; min-height: 16px; }
+      .hint.err { color: #dc2626; }
+      .hint.ok { color: #059669; }
+      .row { display: flex; gap: 8px; margin-top: 16px; justify-content: flex-end; }
+      button {
+        height: 34px; padding: 0 18px; border-radius: 10px;
+        border: 1px solid #d4d4d8; background: #fff; color: #3f3f46;
+        font-size: 13px; cursor: pointer;
+      }
+      button:hover { border-color: #a1a1aa; }
+      button.primary { background: #5b5ce2; border-color: #5b5ce2; color: #fff; }
+      button.primary:hover { background: #4a4bd0; }
+      button:disabled { opacity: 0.55; cursor: default; }
+      .spin { display: inline-block; animation: r 1s linear infinite; }
+      @keyframes r { to { transform: rotate(360deg); } }
+      [hidden] { display: none !important; }
+      .done { text-align: center; padding: 36px 0 28px; }
+      .done .mark {
+        width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 12px;
+        background: linear-gradient(135deg, #5b5ce2, #8b5cf6);
+        color: #fff; font-size: 26px; line-height: 52px;
+      }
+      .done p { margin: 0; font-size: 14px; }
+      .connect { text-align: center; padding: 22px 4px 8px; }
+      .connect p { font-size: 13px; color: #52525b; margin: 0 0 14px; }
+    </style>
+  </head>
+  <body>
+    <div id="form">
+      <h1><span class="logo">拾</span>收藏到拾光导航</h1>
+      <div class="url" id="url"></div>
+
+      <label for="name">网站名称</label>
+      <input type="text" id="name" maxlength="60" />
+
+      <label for="category">分类</label>
+      <select id="category"><option value="">加载中…</option></select>
+      <div class="hint" id="hint"><span class="spin">⟳</span> 正在读取分类并请求 AI 推荐…</div>
+
+      <label for="desc">简介（AI 生成，可修改）</label>
+      <textarea id="desc" maxlength="60" placeholder="留空则由服务端自动生成"></textarea>
+
+      <div class="row">
+        <button id="cancelBtn" type="button">取消</button>
+        <button id="saveBtn" type="button" class="primary">收藏</button>
+      </div>
+    </div>
+
+    <div id="done" class="done" hidden>
+      <div class="mark">✓</div>
+      <p id="doneText"></p>
+    </div>
+
+    <div id="connect" class="connect" hidden>
+      <p>还没有连接导航站：<br />请先在「设置 → 数据 → 浏览器扩展」生成连接码，并粘贴到扩展选项里。</p>
+      <button id="openOptionsBtn" type="button" class="primary">打开扩展设置</button>
+    </div>
+
+    <script src="confirm.js"></script>
+  </body>
+</html>

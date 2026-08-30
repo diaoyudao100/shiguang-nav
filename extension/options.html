@@ -62,7 +62,7 @@
     <div class="wrap">
       <div class="card">
         <h1><span class="logo">拾</span>拾光导航 · 一键收藏</h1>
-        <p class="sub">在任意网页点扩展图标、按 Alt+S 或右键菜单，一键收藏到你的导航站。未连接时先本地暂存，连接后自动同步。</p>
+        <p class="sub">在任意网页点扩展图标、按 Alt+S 或右键菜单，会弹出确认窗：自动读取导航站全部分类、AI 推荐分类与简介，确认后才收藏。</p>
 
         <label for="siteUrl">导航站地址</label>
         <input type="text" id="siteUrl" placeholder="https://shiguang-nav.diaoyudao110.workers.dev" />
@@ -85,16 +85,6 @@
           <button id="testBtn" type="button">测试连接</button>
           <span id="status" class="status"></span>
         </div>
-      </div>
-
-      <div class="card">
-        <h2>暂存队列（<span id="queueCount">0</span> 条）</h2>
-        <div class="row" style="margin-top: 4px">
-          <button id="syncBtn" type="button">立即同步</button>
-          <button id="clearBtn" type="button">清空</button>
-        </div>
-        <ul id="queueList"></ul>
-        <p class="hint" id="queueEmpty">队列是空的：所有收藏都已进入导航站。</p>
       </div>
     </div>
     <script src="options.js"></script>

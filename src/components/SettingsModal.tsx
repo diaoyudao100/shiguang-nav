@@ -703,7 +703,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
             </div>
             <p className="mb-2.5 text-[11px] leading-5 text-ink2">
               {user
-                ? '在浏览器扩展页（chrome://extensions → 开发者模式）加载项目 extension 目录，再把连接码粘贴进扩展设置。之后在任意网页点扩展图标或按 Alt+S 一键收藏：自动带标题，服务端 AI 生成简述并归入合适分类，无需保持本站打开。'
+                ? '在浏览器扩展页（chrome://extensions → 开发者模式）加载项目 extension 目录，再把连接码粘贴进扩展设置。之后在任意网页点扩展图标或按 Alt+S：弹出确认窗，AI 自动推荐分类与简介，可从全部分类中自选，确认后收藏。'
                 : '登录后可生成扩展连接码，在浏览器中一键收藏任意网页。'}
             </p>
             {user && (

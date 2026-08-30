@@ -1,15 +1,16 @@
-/** 一键收藏：浏览器扩展 / 书签脚本经此端点把网页加入导航站
+/** 一键收藏：浏览器扩展确认窗经此组端点把网页加入导航站
  *
  *  认证：Authorization: Bearer <扩展连接码>（长期设备令牌）或会话 Cookie。
- *  服务端完成整条链路：标题兜底（页面 <title>）→ AI 简述（用该用户自己的 AI 配置，
- *  带模型自动纠正并回写）→ 回退页面 meta description → 去重 → 归入分类 → 保存。
+ *  GET  /api/categories    — 用户的分类列表（确认窗下拉框）
+ *  POST /api/quick-suggest — AI 推荐简介 + 分类（确认窗打开时调用）
+ *  POST /api/quick-add     — 收藏入库；desc/categoryId 可由确认窗回传（省一次 AI 调用）
  *  图标无需处理：iconUrl 留空，前端会按域名自动获取。
  */
 import type { NavData, Settings, Site } from '../src/types'
 import { authAny, authSecret, requireUser } from './auth'
-import { jwtSign, jwtVerify, uid } from './crypto'
+import { jwtSign, uid } from './crypto'
 import { chatWithHeal, isAllowedTarget, normalizeBase } from './ai'
-import type { Env, UserRow } from './util'
+import type { Env } from './util'
 import { fail, json, readJson } from './util'
 
 const META_TIMEOUT_MS = 6_000
@@ -20,8 +21,11 @@ const DEVICE_DURATIONS = [365, 1825, 3650, 7300, 0]
 interface QuickAddBody {
   url?: string
   title?: string
+  desc?: string
   categoryId?: string
 }
+
+/* ---------------- 通用小工具 ---------------- */
 
 function corsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get('Origin') ?? ''
@@ -31,31 +35,50 @@ function corsHeaders(req: Request): Record<string, string> {
   return {}
 }
 
-/** 扩展连接码：POST /api/device-token（需网页端登录，body.durationDays 可选）→ { token, expiresAt }
- *  expiresAt 为 null 表示长期有效；重新生成会使旧连接码立即失效（版本号 +1） */
-export async function handleDeviceToken(req: Request, env: Env): Promise<Response> {
-  if (req.method !== 'POST') return fail('方法不允许', 405)
-  const user = await requireUser(req, env)
-  if (user instanceof Response) return user
-  const body = await readJson<{ durationDays?: number }>(req, 2_000)
-  const days = (DEVICE_DURATIONS as readonly number[]).includes(body?.durationDays ?? -1)
-    ? (body!.durationDays as number)
-    : 365
-
-  const ver = (user.device_token_ver ?? 0) + 1
-  await env.DB.prepare('UPDATE users SET device_token_ver = ? WHERE id = ?').bind(ver, user.id).run()
-  const token = await jwtSign({ uid: user.id, typ: 'device', ver }, authSecret(env), days * 86_400)
-  return json({ token, expiresAt: days > 0 ? Date.now() + days * 86_400_000 : null })
+/** 浏览器扩展跨域预检 */
+export function preflight(req: Request): Response {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': req.headers.get('Origin') ?? '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+    },
+  })
 }
 
-/** 连接码有效性预检（扩展「测试连接」用）：Bearer → { user }，无效返回 401 */
-export async function handleDeviceCheck(req: Request, env: Env): Promise<Response> {
-  const user = (await authAny(req, env)) as UserRow | null
-  if (!user) return fail('连接码无效或已过期', 401)
-  return json({ user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar, role: user.role } })
+/** 同源或浏览器扩展来源放行；不合法返回错误 Response（扩展走 Bearer 连接码认证） */
+function originGuard(req: Request): Response | null {
+  const origin = req.headers.get('Origin')
+  if (!origin) return null
+  try {
+    const same = new URL(origin).origin === new URL(req.url).origin
+    if (!same && !/^[a-z-]+-extension:\/\//i.test(origin)) return fail('来源校验失败', 403)
+    return null
+  } catch {
+    return fail('来源校验失败', 403)
+  }
 }
 
-/** 私网地址拒绝抓取（避免探内网）；quick-add 接受公网 http(s) 地址 */
+/** 解析并校验 http(s) 网址；不合法返回 null */
+function parseHttpUrl(raw: string): URL | null {
+  try {
+    const u = new URL(raw.trim())
+    if (
+      (u.protocol === 'http:' || u.protocol === 'https:') &&
+      u.hostname &&
+      (u.hostname.includes('.') || u.hostname === 'localhost')
+    ) {
+      return u
+    }
+  } catch {
+    /* 非 URL */
+  }
+  return null
+}
+
+/** 私网地址拒绝抓取（避免探内网） */
 function isPublicHttpUrl(u: URL): boolean {
   if (u.protocol !== 'http:' && u.protocol !== 'https:') return false
   const h = u.hostname.toLowerCase()
@@ -146,45 +169,166 @@ function freshData(): NavData {
   }
 }
 
-/** POST /api/quick-add：{ url, title? } → { site, categoryId, descSource, duplicate? } */
-export async function handleQuickAdd(req: Request, env: Env): Promise<Response> {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': req.headers.get('Origin') ?? '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Max-Age': '86400',
-      },
-    })
+/** 读取用户云端数据；无数据行或解析失败返回 null */
+async function loadNavData(env: Env, userId: string): Promise<NavData | null> {
+  const row = await env.DB.prepare('SELECT data FROM user_data WHERE user_id = ?').bind(userId).first<{ data: string }>()
+  if (!row) return null
+  try {
+    return JSON.parse(row.data) as NavData
+  } catch {
+    return null
   }
-  if (req.method !== 'POST') return fail('方法不允许', 405)
+}
 
-  // 来源校验：同源放行；浏览器扩展（chrome-extension:// 等）放行（其走 Bearer 连接码认证）
-  const origin = req.headers.get('Origin')
-  if (origin) {
-    try {
-      const same = new URL(origin).origin === new URL(req.url).origin
-      if (!same && !/^[a-z-]+-extension:\/\//i.test(origin)) return fail('来源校验失败', 403)
-    } catch {
-      return fail('来源校验失败', 403)
-    }
+/** 分类归属：请求指定 → AI 推荐（匹配现有分类名）→ 第一个分类 */
+function resolveCategory(data: NavData, explicitId: string | undefined, aiCategory: string): string {
+  if (explicitId && data.categories.some((c) => c.id === explicitId)) return explicitId
+  if (aiCategory) {
+    const hit = data.categories.find(
+      (c) => c.name.trim() === aiCategory || c.name.trim().toLowerCase() === aiCategory.toLowerCase(),
+    )
+    if (hit) return hit.id
   }
+  return data.categories[0]?.id ?? ''
+}
+
+/* ---------------- AI：简介 + 分类推荐 ---------------- */
+
+interface AiEnrich {
+  desc: string
+  aiCategory: string
+  model?: string
+}
+
+/** 用该用户自己的 AI 配置生成一句简介并从现有分类中推荐；未配置/失败返回 null */
+async function aiEnrich(
+  settings: Settings,
+  url: string,
+  hostname: string,
+  name: string,
+  categories: { name: string }[],
+): Promise<AiEnrich | null> {
+  const aiKey = (settings.aiKey ?? '').trim()
+  if (!aiKey) return null
+  const provider = settings.aiProvider === 'gemini' ? 'gemini' : 'openai'
+  const base = normalizeBase(provider, settings.aiBaseURL ?? '')
+  if (!isAllowedTarget(base)) return null
+  const model = (settings.aiModel ?? '').trim() || (provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.0-flash')
+  const categoryNames = categories.map((c) => c.name).filter(Boolean)
+  const prompt = [
+    `给定网站「${name}」（${url}，域名 ${hostname}）。`,
+    categoryNames.length ? `分类列表：${categoryNames.join('、')}。` : '',
+    '请完成两件事：1. 为该网站写一句中文简介，不超过 24 个字；2. 从分类列表中选一个最合适的分类名（必须原样使用列表中的名称；若列表为空或都不合适，选最接近的一个）。',
+    '严格以 JSON 返回：{"desc":"...","category":"..."}，不要输出任何其他内容。',
+  ]
+    .filter(Boolean)
+    .join('\n')
+  try {
+    const r = await chatWithHeal(provider, base, aiKey, model, '你是一个网址导航助手，只输出 JSON。', prompt)
+    const raw = r.text
+      .replace(/<think>[\s\S]*?<\/think>/gi, '')
+      .trim()
+      .replace(/^["「『]|["」』]$/g, '')
+      .trim()
+    let desc = ''
+    let aiCategory = ''
+    const m = raw.match(/\{[\s\S]*\}/)
+    if (m) {
+      try {
+        const obj = JSON.parse(m[0]) as { desc?: string; category?: string }
+        desc = String(obj.desc ?? '')
+          .replace(/^["「『]|["」』]$/g, '')
+          .trim()
+          .slice(0, 60)
+        aiCategory = String(obj.category ?? '').trim().slice(0, 30)
+      } catch {
+        /* JSON 损坏 → 按纯文本当简介用 */
+      }
+    }
+    if (!desc && raw) desc = raw.slice(0, 60)
+    return { desc, aiCategory, model: r.model }
+  } catch {
+    return null
+  }
+}
+
+/* ---------------- 连接码 ---------------- */
+
+/** 扩展连接码：POST /api/device-token（需网页端登录，body.durationDays 可选）→ { token, expiresAt }
+ *  expiresAt 为 null 表示长期有效；重新生成会使旧连接码立即失效（版本号 +1） */
+export async function handleDeviceToken(req: Request, env: Env): Promise<Response> {
+  if (req.method !== 'POST') return fail('方法不允许', 405)
+  const user = await requireUser(req, env)
+  if (user instanceof Response) return user
+  const body = await readJson<{ durationDays?: number }>(req, 2_000)
+  const days = (DEVICE_DURATIONS as readonly number[]).includes(body?.durationDays ?? -1)
+    ? (body!.durationDays as number)
+    : 365
+
+  const ver = (user.device_token_ver ?? 0) + 1
+  await env.DB.prepare('UPDATE users SET device_token_ver = ? WHERE id = ?').bind(ver, user.id).run()
+  const token = await jwtSign({ uid: user.id, typ: 'device', ver }, authSecret(env), days * 86_400)
+  return json({ token, expiresAt: days > 0 ? Date.now() + days * 86_400_000 : null })
+}
+
+/** 连接码有效性预检（扩展「测试连接」用）：Bearer → { user }，无效返回 401 */
+export async function handleDeviceCheck(req: Request, env: Env): Promise<Response> {
+  const user = await authAny(req, env)
+  if (!user) return fail('连接码无效或已过期', 401)
+  return json({ user: { id: user.id, name: user.name, email: user.email, avatar: user.avatar, role: user.role } })
+}
+
+/* ---------------- 扩展确认窗端点 ---------------- */
+
+/** GET /api/categories：用户分类列表（确认窗下拉框） */
+export async function handleCategories(req: Request, env: Env): Promise<Response> {
+  if (req.method !== 'GET') return fail('方法不允许', 405)
+  const guard = originGuard(req)
+  if (guard) return guard
+  const user = await authAny(req, env)
+  if (!user) return fail('未连接：请先在导航站「设置 → 数据 → 浏览器扩展」生成连接码并填入扩展', 401)
+  const data = (await loadNavData(env, user.id)) ?? freshData()
+  return json({ categories: data.categories.map(({ id, name }) => ({ id, name })) }, 200, corsHeaders(req))
+}
+
+/** POST /api/quick-suggest：AI 推荐简介 + 分类（确认窗打开时调用，不入库） */
+export async function handleQuickSuggest(req: Request, env: Env): Promise<Response> {
+  if (req.method !== 'POST') return fail('方法不允许', 405)
+  const guard = originGuard(req)
+  if (guard) return guard
+  const user = await authAny(req, env)
+  if (!user) return fail('未连接：请先在导航站「设置 → 数据 → 浏览器扩展」生成连接码并填入扩展', 401)
+  const body = await readJson<{ url?: string; title?: string }>(req, 16_000)
+  const parsed = parseHttpUrl(body?.url ?? '')
+  if (!parsed) return fail('无效的网址')
+  const url = parsed.href
+
+  const data = (await loadNavData(env, user.id)) ?? freshData()
+  if (!data.settings) data.settings = defaultSettings()
+  const name = ((body?.title ?? '').trim() || parsed.hostname).replace(/\s+/g, ' ').slice(0, 60)
+
+  const ai = await aiEnrich(data.settings as Settings, url, parsed.hostname, name, data.categories)
+  const categoryId = resolveCategory(data, undefined, ai?.aiCategory ?? '')
+  const category = data.categories.find((c) => c.id === categoryId)?.name ?? ''
+  return json(
+    { desc: ai?.desc ?? '', descSource: ai?.desc ? 'ai' : 'none', categoryId, category },
+    200,
+    corsHeaders(req),
+  )
+}
+
+/** POST /api/quick-add：收藏入库
+ *  body.desc / body.categoryId 由确认窗回传：跳过 AI 生成、按所选分类入库 */
+export async function handleQuickAdd(req: Request, env: Env): Promise<Response> {
+  if (req.method !== 'POST') return fail('方法不允许', 405)
+  const guard = originGuard(req)
+  if (guard) return guard
   const user = await authAny(req, env)
   if (!user) return fail('未连接：请先在导航站「设置 → 数据 → 浏览器扩展」生成连接码并填入扩展', 401)
 
   const body = await readJson<QuickAddBody>(req, 32_000)
-  let parsed: URL
-  try {
-    parsed = new URL((body?.url ?? '').trim())
-  } catch {
-    return fail('无效的网址')
-  }
-  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return fail('仅支持 http/https 网址')
-  if (!parsed.hostname || (!parsed.hostname.includes('.') && parsed.hostname !== 'localhost')) {
-    return fail('无效的网址')
-  }
+  const parsed = parseHttpUrl(body?.url ?? '')
+  if (!parsed) return fail('无效的网址')
   const url = parsed.href
 
   const row = await env.DB.prepare('SELECT data FROM user_data WHERE user_id = ?').bind(user.id).first<{ data: string }>()
@@ -208,74 +352,34 @@ export async function handleQuickAdd(req: Request, env: Env): Promise<Response> 
   const dup = data.sites.find((s) => (s.url ?? '').replace(/\/+$/, '').toLowerCase() === key)
   if (dup) return json({ duplicate: true, site: dup }, 200, corsHeaders(req))
 
-  // 页面元信息：标题 / 简述兜底（私网地址跳过抓取）
-  const meta = isPublicHttpUrl(parsed) ? await fetchPageMeta(url) : null
+  const providedDesc = (body?.desc ?? '').trim()
+  // 页面元信息仅在需要兜底时抓取（私网地址跳过）
+  const meta = !providedDesc && isPublicHttpUrl(parsed) ? await fetchPageMeta(url) : null
 
-  let name = ((body?.title ?? '').trim() || meta?.title || parsed.hostname).replace(/\s+/g, ' ').slice(0, 60)
+  const name = ((body?.title ?? '').trim() || meta?.title || parsed.hostname).replace(/\s+/g, ' ').slice(0, 60)
 
-  // AI：一句简介 + 自动归类（从用户现有分类里选）。未配置或失败回退 meta description / 第一个分类
-  const s = data.settings as Settings
+  // 简介：确认窗回传 → AI（含模型自动纠正，回写用户设置）→ meta description
   let desc = ''
-  let descSource: 'ai' | 'meta' | 'none' = 'none'
+  let descSource: 'preset' | 'ai' | 'meta' | 'none' = 'none'
   let aiCategory = ''
-  const aiKey = (s.aiKey ?? '').trim()
-  if (aiKey) {
-    const provider = s.aiProvider === 'gemini' ? 'gemini' : 'openai'
-    const base = normalizeBase(provider, s.aiBaseURL ?? '')
-    if (isAllowedTarget(base)) {
-      const model = (s.aiModel ?? '').trim() || (provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.0-flash')
-      const categoryNames = data.categories.map((c) => c.name).filter(Boolean)
-      const prompt = [
-        `给定网站「${name}」（${url}，域名 ${parsed.hostname}）。`,
-        categoryNames.length ? `分类列表：${categoryNames.join('、')}。` : '',
-        '请完成两件事：1. 为该网站写一句中文简介，不超过 24 个字；2. 从分类列表中选一个最合适的分类名（必须原样使用列表中的名称；若列表为空或都不合适，选最接近的一个）。',
-        '严格以 JSON 返回：{"desc":"...","category":"..."}，不要输出任何其他内容。',
-      ]
-        .filter(Boolean)
-        .join('\n')
-      try {
-        const r = await chatWithHeal(provider, base, aiKey, model, '你是一个网址导航助手，只输出 JSON。', prompt)
-        const raw = r.text
-          .replace(/<think>[\s\S]*?<\/think>/gi, '')
-          .trim()
-          .replace(/^["「『]|["」』]$/g, '')
-          .trim()
-        const m = raw.match(/\{[\s\S]*\}/)
-        if (m) {
-          try {
-            const obj = JSON.parse(m[0]) as { desc?: string; category?: string }
-            desc = String(obj.desc ?? '')
-              .replace(/^["「『]|["」』]$/g, '')
-              .trim()
-              .slice(0, 60)
-            aiCategory = String(obj.category ?? '').trim().slice(0, 30)
-          } catch {
-            /* JSON 损坏 → 按纯文本当简介用 */
-          }
-        }
-        if (!desc && raw) desc = raw.slice(0, 60)
-        if (desc) descSource = 'ai'
-        // 模型被自动纠正：回写到用户设置，后续请求直接用正确模型
-        if (r.model && r.model !== (s.aiModel ?? '').trim()) s.aiModel = r.model
-      } catch {
-        /* AI 失败不阻塞收藏，走回退 */
-      }
+  if (providedDesc) {
+    desc = providedDesc.slice(0, 60)
+    descSource = 'preset'
+  } else {
+    const ai = await aiEnrich(data.settings as Settings, url, parsed.hostname, name, data.categories)
+    if (ai) {
+      desc = ai.desc
+      aiCategory = ai.aiCategory
+      if (desc) descSource = 'ai'
+      if (ai.model && ai.model !== (data.settings.aiModel ?? '').trim()) data.settings.aiModel = ai.model
+    }
+    if (!desc && meta?.description) {
+      desc = meta.description.slice(0, 60)
+      descSource = 'meta'
     }
   }
-  if (!desc && meta?.description) {
-    desc = meta.description.slice(0, 60)
-    descSource = 'meta'
-  }
 
-  // 分类：请求指定 → AI 归类（匹配现有分类名）→ 第一个分类 → 新建「默认」
-  let categoryId = body?.categoryId && data.categories.some((c) => c.id === body.categoryId) ? body.categoryId : ''
-  if (!categoryId && aiCategory) {
-    const hit = data.categories.find(
-      (c) => c.name.trim() === aiCategory || c.name.trim().toLowerCase() === aiCategory.toLowerCase(),
-    )
-    if (hit) categoryId = hit.id
-  }
-  if (!categoryId) categoryId = data.categories[0]?.id ?? ''
+  let categoryId = resolveCategory(data, body?.categoryId, aiCategory)
   if (!categoryId) {
     const c = { id: uid(), name: '默认' }
     data.categories.push(c)
@@ -304,6 +408,6 @@ export async function handleQuickAdd(req: Request, env: Env): Promise<Response> 
     )
     .bind(user.id, JSON.stringify(data), now)
     .run()
-  const categoryName = data.categories.find((c) => c.id === categoryId)?.name ?? ''
-  return json({ site, categoryId, category: categoryName, descSource }, 200, corsHeaders(req))
+  const category = data.categories.find((c) => c.id === categoryId)?.name ?? ''
+  return json({ site, categoryId, category, descSource }, 200, corsHeaders(req))
 }
