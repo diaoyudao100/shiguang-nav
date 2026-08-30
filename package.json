@@ -11,7 +11,8 @@
     "cf:dev": "npm run build && wrangler dev",
     "deploy": "npm run build && wrangler deploy",
     "cf:db:init": "wrangler d1 execute shiguang-nav --remote -f schema.sql",
-    "cf:db:init:local": "wrangler d1 execute shiguang-nav --local -f schema.sql"
+    "cf:db:init:local": "wrangler d1 execute shiguang-nav --local -f schema.sql",
+    "ext:pack": "powershell -NoProfile -Command \"Compress-Archive -Path 'extension/*' -DestinationPath 'shiguang-nav-extension.zip' -Force\""
   },
   "dependencies": {
     "@fontsource-variable/inter": "^5.3.0",
