@@ -13,7 +13,7 @@
     {
       "binding": "DB",
       "database_name": "shiguang-nav",
-      "database_id": "替换为你的 D1 database_id（wrangler d1 create 后获得）"
+      "database_id": "0cd1c96b-5035-40a3-aaf1-7e8ffc8c0e56"
     }
   ]
 }
