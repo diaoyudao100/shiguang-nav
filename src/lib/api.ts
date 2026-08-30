@@ -51,6 +51,8 @@ export const api = {
   updateName: (name: string) => req<{ user: AuthUser }>('PUT', '/api/me', { name }),
   getData: () => req<{ data: NavData | null; updatedAt: number | null }>('GET', '/api/data'),
   putData: (data: NavData) => req<{ updatedAt: number }>('PUT', '/api/data', { data }),
+  /** 浏览器扩展连接码（长期设备令牌，用于一键收藏） */
+  deviceToken: () => req<{ token: string }>('POST', '/api/device-token'),
   admin: {
     overview: () => req<AdminOverview>('GET', '/api/admin/overview'),
     createInvite: (p: { maxUses: number; expiresInDays: number | null }) =>

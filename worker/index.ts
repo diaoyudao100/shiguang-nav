@@ -20,6 +20,7 @@ import {
 } from './admin'
 import { handleGetData, handlePutData } from './data'
 import { handleAiChat, handleAiModels } from './ai'
+import { handleDeviceCheck, handleDeviceToken, handleQuickAdd } from './quickadd'
 import { fail } from './util'
 import type { Env } from './util'
 
@@ -57,6 +58,13 @@ export default {
       // AI 代理（同源 POST，仅转发到 https 的提供商接口）
       if (path === '/api/ai/chat' && method === 'POST') return await handleAiChat(req)
       if (path === '/api/ai/models' && method === 'POST') return await handleAiModels(req)
+
+      // 浏览器扩展：一键收藏（Bearer 连接码或会话认证）
+      if (path === '/api/device-token' && method === 'POST') return await handleDeviceToken(req, env)
+      if (path === '/api/device-check' && method === 'GET') return await handleDeviceCheck(req, env)
+      if (path === '/api/quick-add' && (method === 'POST' || method === 'OPTIONS')) {
+        return await handleQuickAdd(req, env)
+      }
 
       // 管理后台
       if (path === '/api/admin/overview' && method === 'GET') return await handleAdminOverview(req, env)

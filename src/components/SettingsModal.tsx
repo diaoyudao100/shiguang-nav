@@ -3,6 +3,7 @@ import { useStore } from '../hooks/useStore'
 import { useTheme } from '../hooks/useTheme'
 import { useAuth } from '../hooks/useAuth'
 import { generateLetterIcon } from '../lib/favicon'
+import { api } from '../lib/api'
 import { Field, Modal, inputCls } from './Modal'
 import { useToast } from './Toast'
 import { aiListModels, aiTestConnection, aiDescribeSite } from '../lib/ai'
@@ -66,6 +67,8 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
     done: 0,
     total: 0,
   })
+  const [deviceToken, setDeviceToken] = useState('')
+  const [tokenLoading, setTokenLoading] = useState(false)
 
   const letter = (form.siteTitle || '拾光导航').trim().charAt(0) || '拾'
   const regenIcons = () => {
@@ -207,6 +210,25 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
   }
 
   const pinned = data.sites.filter((s) => s.pinned).length
+
+  /** 生成扩展连接码：长期设备令牌，粘贴进浏览器扩展即可一键收藏 */
+  const genDeviceToken = async () => {
+    setTokenLoading(true)
+    try {
+      const { token } = await api.deviceToken()
+      setDeviceToken(token)
+      try {
+        await navigator.clipboard.writeText(token)
+        toast('连接码已生成并复制，请粘贴到扩展设置中')
+      } catch {
+        toast('连接码已生成，请手动复制')
+      }
+    } catch (e) {
+      toast((e as Error).message || '生成失败，请重新登录后再试')
+    } finally {
+      setTokenLoading(false)
+    }
+  }
 
   return (
     <Modal open={open} title="设置" onClose={onClose} width="max-w-[560px]">
@@ -665,6 +687,54 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
           >
             <IconDatabase width={14} height={14} /> 导入 / 导出（书签 & JSON 备份）
           </button>
+
+          {/* 浏览器扩展 · 一键收藏 */}
+          <div className="border-t border-line pt-4">
+            <div className="mb-1 flex items-center gap-1.5">
+              <IconKey width={12} height={12} className="text-accent" />
+              <p className="text-xs font-semibold text-ink">浏览器扩展 · 一键收藏</p>
+            </div>
+            <p className="mb-2.5 text-[11px] leading-5 text-ink2">
+              {user
+                ? '在浏览器扩展页（chrome://extensions → 开发者模式）加载项目 extension 目录，再把连接码粘贴进扩展设置。之后在任意网页点扩展图标或按 Alt+S 即可一键收藏：自动带标题，服务端补全图标与 AI 简述，无需保持本站打开。'
+                : '登录后可生成扩展连接码，在浏览器中一键收藏任意网页。'}
+            </p>
+            {user &&
+              (deviceToken ? (
+                <div className="flex gap-2">
+                  <input
+                    readOnly
+                    value={deviceToken}
+                    onFocus={(e) => e.currentTarget.select()}
+                    className={inputCls + ' h-9 min-w-0 flex-1 py-0 font-mono text-[11px]'}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(deviceToken).then(
+                        () => toast('连接码已复制'),
+                        () => toast('复制失败，请手动选择复制'),
+                      )
+                    }}
+                    className="h-9 shrink-0 rounded-lg border border-line bg-surface px-3.5 text-xs text-ink2 transition-all hover:border-line-strong hover:text-ink"
+                  >
+                    复制
+                  </button>
+                  <button
+                    type="button"
+                    onClick={genDeviceToken}
+                    disabled={tokenLoading}
+                    className="h-9 shrink-0 rounded-lg border border-line bg-surface px-3.5 text-xs text-ink2 transition-all hover:border-line-strong hover:text-ink disabled:opacity-60"
+                  >
+                    重新生成
+                  </button>
+                </div>
+              ) : (
+                <button type="button" onClick={genDeviceToken} disabled={tokenLoading} className="btn-ghost h-11 w-full">
+                  <IconKey width={14} height={14} /> {tokenLoading ? '生成中…' : '生成扩展连接码'}
+                </button>
+              ))}
+          </div>
           <button
             onClick={() => {
               if (window.confirm('确定清空所有数据并恢复为初始示例吗？此操作不可撤销。')) {

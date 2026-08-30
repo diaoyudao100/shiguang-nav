@@ -27,6 +27,7 @@ const OAUTH_STATE_COOKIE = 'nav_oauth_state'
 function secret(env: Env): string {
   return env.JWT_SECRET || 'insecure-dev-secret'
 }
+export { secret as authSecret }
 
 interface SessionPayload {
   uid: string
@@ -47,6 +48,18 @@ export async function requireUser(req: Request, env: Env): Promise<UserRow | Res
   const user = await getSessionUser(req, env)
   if (!user) return fail('未登录或会话已过期', 401)
   return user
+}
+
+/** 会话 Cookie 或「扩展连接码」（Authorization: Bearer，长期设备令牌）二选一认证 */
+export async function authAny(req: Request, env: Env): Promise<UserRow | null> {
+  const auth = req.headers.get('Authorization') ?? ''
+  if (/^Bearer\s+/i.test(auth)) {
+    const payload = await jwtVerify<{ uid?: string; typ?: string }>(auth.replace(/^Bearer\s+/i, ''), secret(env))
+    if (!payload?.uid || payload.typ !== 'device') return null
+    const row = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(payload.uid).first<UserRow>()
+    return row && row.status === 'active' ? row : null
+  }
+  return getSessionUser(req, env)
 }
 
 export async function requireAdmin(req: Request, env: Env): Promise<UserRow | Response> {
@@ -142,7 +155,7 @@ export async function handleLogout(): Promise<Response> {
 }
 
 export async function handleMe(req: Request, env: Env): Promise<Response> {
-  const user = await getSessionUser(req, env)
+  const user = await authAny(req, env)
   if (!user) return json({ user: null })
   const dataRow = await env.DB
     .prepare('SELECT updated_at FROM user_data WHERE user_id = ?')

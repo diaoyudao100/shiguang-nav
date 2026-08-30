@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <title>拾光导航 · 一键收藏 设置</title>
+    <style>
+      :root { color-scheme: light; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 28px 0 48px;
+        font: 14px/1.6 'Segoe UI', 'Microsoft YaHei', system-ui, sans-serif;
+        color: #27272a;
+        background: #f4f4f5;
+      }
+      .wrap { width: min(520px, calc(100% - 32px)); margin: 0 auto; }
+      .card {
+        background: #fff;
+        border: 1px solid #e4e4e7;
+        border-radius: 16px;
+        padding: 20px;
+        margin-bottom: 16px;
+      }
+      h1 { font-size: 16px; margin: 0 0 2px; display: flex; align-items: center; gap: 8px; }
+      h1 .logo {
+        width: 26px; height: 26px; border-radius: 8px; flex: none;
+        background: linear-gradient(135deg, #5b5ce2, #8b5cf6);
+        display: inline-flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 13px;
+      }
+      .sub { color: #71717a; font-size: 12px; margin: 0 0 16px; }
+      h2 { font-size: 13px; margin: 0 0 10px; }
+      label { display: block; font-size: 12px; color: #52525b; margin: 12px 0 4px; }
+      input[type='text'], input[type='password'] {
+        width: 100%; height: 38px; padding: 0 12px;
+        border: 1px solid #d4d4d8; border-radius: 10px;
+        font-size: 13px; outline: none; background: #fafafa;
+      }
+      input:focus { border-color: #5b5ce2; background: #fff; }
+      .row { display: flex; gap: 8px; margin-top: 14px; align-items: center; flex-wrap: wrap; }
+      button {
+        height: 36px; padding: 0 16px; border-radius: 10px;
+        border: 1px solid #d4d4d8; background: #fff; color: #3f3f46;
+        font-size: 13px; cursor: pointer;
+      }
+      button:hover { border-color: #a1a1aa; }
+      button.primary { background: #5b5ce2; border-color: #5b5ce2; color: #fff; }
+      button.primary:hover { background: #4a4bd0; }
+      button:disabled { opacity: 0.5; cursor: default; }
+      .status { font-size: 12px; color: #71717a; min-height: 18px; }
+      .status.ok { color: #059669; }
+      .status.err { color: #dc2626; }
+      .toggle { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; color: #52525b; }
+      ul { margin: 8px 0 0; padding-left: 18px; font-size: 12px; color: #52525b; max-height: 180px; overflow: auto; }
+      li { margin-bottom: 4px; word-break: break-all; }
+      .hint { font-size: 12px; color: #71717a; margin-top: 10px; }
+      code { background: #f4f4f5; border-radius: 4px; padding: 1px 5px; font-size: 11px; }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="card">
+        <h1><span class="logo">拾</span>拾光导航 · 一键收藏</h1>
+        <p class="sub">在任意网页点扩展图标、按 Alt+S 或右键菜单，一键收藏到你的导航站。未连接时先本地暂存，连接后自动同步。</p>
+
+        <label for="siteUrl">导航站地址</label>
+        <input type="text" id="siteUrl" placeholder="https://shiguang-nav.diaoyudao110.workers.dev" />
+
+        <div id="permRow" hidden>
+          <div class="hint" style="color:#b45309">⚠ 需要授权扩展访问上面这个域名才能保存</div>
+          <div class="row"><button id="grantBtn" type="button">授权访问该站点</button></div>
+        </div>
+
+        <label for="token">连接码（在导航站「设置 → 数据 → 浏览器扩展」生成）</label>
+        <input type="password" id="token" placeholder="粘贴连接码" autocomplete="off" />
+
+        <div class="toggle">
+          <input type="checkbox" id="quiet" />
+          <label for="quiet" style="margin: 0">安静模式（不弹系统通知，仅显示角标）</label>
+        </div>
+
+        <div class="row">
+          <button class="primary" id="saveBtn" type="button">保存</button>
+          <button id="testBtn" type="button">测试连接</button>
+          <span id="status" class="status"></span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>暂存队列（<span id="queueCount">0</span> 条）</h2>
+        <div class="row" style="margin-top: 4px">
+          <button id="syncBtn" type="button">立即同步</button>
+          <button id="clearBtn" type="button">清空</button>
+        </div>
+        <ul id="queueList"></ul>
+        <p class="hint" id="queueEmpty">队列是空的：所有收藏都已进入导航站。</p>
+      </div>
+    </div>
+    <script src="options.js"></script>
+  </body>
+</html>

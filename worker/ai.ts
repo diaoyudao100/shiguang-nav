@@ -24,7 +24,7 @@ interface AiModelsBody {
 }
 
 /** 本地大模型服务（Ollama / LM Studio 等）允许 http，其余必须 https */
-function isAllowedTarget(url: string): boolean {
+export function isAllowedTarget(url: string): boolean {
   try {
     const u = new URL(url)
     if (u.protocol === 'https:') return true
@@ -67,7 +67,7 @@ function unreachable(e: unknown): string {
 }
 
 /** 判定是否"模型不被该提供商支持"类错误（值得自动换模型重试） */
-function isModelMismatch(status: number, raw: string): boolean {
+export function isModelMismatch(status: number, raw: string): boolean {
   return (status === 400 || status === 404) && /model/i.test(raw)
 }
 
@@ -75,14 +75,14 @@ const NON_CHAT = /embed|rerank|whisper|tts|audio|moderation|dall-?e|image|clip|g
 const PREFER = /flash|mini|lite|instant|turbo|air|small|fast|chat/i
 
 /** 从模型列表里挑一个适合写简述的轻量对话模型 */
-function pickChatModel(models: string[]): string | null {
+export function pickChatModel(models: string[]): string | null {
   const usable = models.filter((m) => !NON_CHAT.test(m))
   if (!usable.length) return null
   return usable.find((m) => PREFER.test(m)) ?? usable[0]
 }
 
 /** 拉取提供商模型列表；失败返回 null（不打断主流程） */
-async function listModels(provider: string, base: string, key: string): Promise<string[] | null> {
+export async function listModels(provider: string, base: string, key: string): Promise<string[] | null> {
   try {
     const res =
       provider === 'gemini'
@@ -113,7 +113,7 @@ interface ChatResult {
 }
 
 /** 发起一次对话请求；网络异常时抛错（由调用方转为提示，不再重试） */
-async function chatOnce(
+export async function chatOnce(
   provider: string,
   base: string,
   key: string,
@@ -182,6 +182,43 @@ function extractText(provider: string, raw: string): { text: string; hint?: stri
   }
 }
 
+export interface HealedChat {
+  text: string
+  model?: string // 自动纠正后实际使用的模型（未纠正时为空）
+}
+
+/** 带模型自动纠正的对话：模型不被支持时自动拉列表、挑替代模型重试一次；失败抛错 */
+export async function chatWithHeal(
+  provider: string,
+  base: string,
+  key: string,
+  model: string,
+  system: string,
+  prompt: string,
+): Promise<HealedChat> {
+  const r = await chatOnce(provider, base, key, model, system, prompt)
+
+  // 模型不被支持：自动拉列表挑一个可用的重试一次
+  if (!r.ok && isModelMismatch(r.status, r.raw)) {
+    const list = await listModels(provider, base, key)
+    const alt = list ? pickChatModel(list) : null
+    if (alt && alt !== model) {
+      const r2 = await chatOnce(provider, base, key, alt, system, prompt)
+      if (!r2.ok) throw new Error(providerError(r2.status, r2.raw))
+      const t2 = extractText(provider, r2.raw)
+      if (t2.hint) throw new Error(t2.hint)
+      if (!t2.text) throw new Error('AI 未返回内容，请换一个模型试试')
+      return { text: t2.text, model: alt }
+    }
+  }
+
+  if (!r.ok) throw new Error(providerError(r.status, r.raw))
+  const { text, hint } = extractText(provider, r.raw)
+  if (hint) throw new Error(hint)
+  if (!text) throw new Error('AI 未返回内容，请换一个模型试试')
+  return { text }
+}
+
 /** POST /api/ai/chat：转发对话请求，返回 { text, model? }（model 仅在自动纠正时回传） */
 export async function handleAiChat(req: Request): Promise<Response> {
   if (req.method !== 'POST') return fail('方法不允许', 405)
@@ -190,43 +227,16 @@ export async function handleAiChat(req: Request): Promise<Response> {
   if (!body?.apiKey?.trim() || !body.prompt) return fail('缺少 API KEY 或提问内容')
   const provider = body.provider === 'gemini' ? 'gemini' : 'openai'
   const key = body.apiKey.trim()
-  const system = body.system ?? ''
-  const prompt = body.prompt
   const model = (body.model ?? '').trim() || (provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.0-flash')
   const base = normalizeBase(provider, body.baseUrl ?? '')
   if (!isAllowedTarget(base)) return fail('BASE URL 必须是 https 地址（本地仅允许 127.0.0.1 / localhost）')
 
-  let r: ChatResult
   try {
-    r = await chatOnce(provider, base, key, model, system, prompt)
+    const r = await chatWithHeal(provider, base, key, model, body.system ?? '', body.prompt)
+    return json(r.model ? { text: r.text, model: r.model } : { text: r.text })
   } catch (e) {
     return fail((e as Error).message, 502)
   }
-
-  // 模型不被支持：自动拉列表挑一个可用的重试一次
-  if (!r.ok && isModelMismatch(r.status, r.raw)) {
-    const list = await listModels(provider, base, key)
-    const alt = list ? pickChatModel(list) : null
-    if (alt && alt !== model) {
-      let r2: ChatResult
-      try {
-        r2 = await chatOnce(provider, base, key, alt, system, prompt)
-      } catch (e) {
-        return fail((e as Error).message, 502)
-      }
-      if (!r2.ok) return fail(providerError(r2.status, r2.raw), 502)
-      const t2 = extractText(provider, r2.raw)
-      if (t2.hint) return fail(t2.hint, 502)
-      if (!t2.text) return fail('AI 未返回内容，请换一个模型试试', 502)
-      return json({ text: t2.text, model: alt })
-    }
-  }
-
-  if (!r.ok) return fail(providerError(r.status, r.raw), 502)
-  const { text, hint } = extractText(provider, r.raw)
-  if (hint) return fail(hint, 502)
-  if (!text) return fail('AI 未返回内容，请换一个模型试试', 502)
-  return json({ text })
 }
 
 /** POST /api/ai/models：拉取提供商模型列表，返回 { models } */
