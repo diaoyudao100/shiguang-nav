@@ -79,14 +79,14 @@ function Shell() {
             <Sections
               drag={drag}
               setDrag={setDrag}
-              query={query.trim()}
+              query={scope === 'in' ? query.trim() : ''}
               activeCat={activeCat}
               onEditSite={(site) => setLinkModal({ open: true, site, defaultCategoryId: null })}
               onAddToCategory={(catId) => openAdd(catId)}
             />
           </div>
 
-          {data.sites.length === 0 && !query && (
+          {data.sites.length === 0 && !(scope === 'in' && query) && (
             <div className="mt-2 rounded-2xl border border-dashed border-line-strong/60 py-16 text-center">
               <p className="text-sm font-medium">这里还是空的</p>
               <p className="mt-1.5 text-xs text-ink2">添加第一个网站，或从浏览器书签一键导入</p>

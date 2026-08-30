@@ -123,8 +123,8 @@ const CAT_ICON_SUGGEST: Record<string, string> = {
   导航: 'compass', 网盘: 'cloud', 搜索: 'search', 生活: 'coffee', 健康: 'heart-pulse',
 }
 
-/** 宽松的字段修补，保证结构完整 */
-function migrate(data: Partial<NavData>): NavData {
+/** 宽松的字段修补，保证结构完整（云端同步等外部数据入口必须过一遍，兼容旧格式） */
+export function migrate(data: Partial<NavData>): NavData {
   const base = defaultData()
   const categories = Array.isArray(data.categories)
     ? data.categories

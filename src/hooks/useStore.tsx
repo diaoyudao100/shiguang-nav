@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from 'react'
 import type { Category, NavData, Settings, Site } from '../types'
-import { defaultData, loadData, saveData, STORAGE_KEY } from '../lib/storage'
+import { defaultData, loadData, migrate, saveData, STORAGE_KEY } from '../lib/storage'
 import { uid } from '../lib/id'
 import { normalizeUrl } from '../lib/favicon'
 import { api } from '../lib/api'
@@ -204,7 +204,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           if (cancelled) return
           const meta = readSyncMeta()
           if (r.data && r.updatedAt && r.updatedAt > meta.lastCloudUpdatedAt) {
-            base = { ...r.data, settings: { ...r.data.settings, theme: keptTheme } }
+            // 云端数据可能来自旧版本（缺 icon 等新字段）：过一遍字段修补再采用
+            const normalized = migrate(r.data)
+            base = { ...normalized, settings: { ...normalized.settings, theme: keptTheme } }
             writeSyncMeta({ lastCloudUpdatedAt: r.updatedAt, dirty: false })
           } else if (!r.data && !meta.dirty) {
             // 云端还没有数据且本地无未同步的修改：以默认示例数据初始化云端

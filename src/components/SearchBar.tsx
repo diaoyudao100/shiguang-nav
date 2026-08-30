@@ -77,13 +77,7 @@ export function SearchBar({ scope, setScope, query, setQuery, compact }: SearchB
         <input
           ref={inputRef}
           value={query}
-          onChange={(e) => {
-            setQuery(e.target.value)
-            if (scope === 'out' && e.target.value) setScope('in')
-          }}
-          onFocus={() => {
-            if (query) setScope('in')
-          }}
+          onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') submit()
           }}
