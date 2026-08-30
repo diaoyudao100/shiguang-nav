@@ -101,6 +101,10 @@ $('desc').addEventListener('input', () => {
   userTouchedDesc = true
 })
 $('cancelBtn').addEventListener('click', () => window.close())
+$('settingsBtn').addEventListener('click', () => {
+  chrome.tabs.create({ active: true, url: chrome.runtime.getURL('options.html') })
+  window.close()
+})
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') window.close()
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('saveBtn').click()
