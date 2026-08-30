@@ -1,6 +1,6 @@
 /** 认证：邮箱注册/登录、OAuth 起始与回调、会话、邀请码校验 */
 import type { AuthUser } from '../src/types'
-import { hashPassword, jwtSign, jwtVerify, randomCode, uid, verifyPassword } from './crypto'
+import { hashPassword, jwtSign, jwtVerify, randomCode, hashCode, uid, verifyPassword } from './crypto'
 import type { Identity } from './oauth'
 import {
   buildAuthorizeUrl,
@@ -50,19 +50,16 @@ export async function requireUser(req: Request, env: Env): Promise<UserRow | Res
   return user
 }
 
-/** 会话 Cookie 或「扩展连接码」（Authorization: Bearer，长期设备令牌）二选一认证 */
+/** 会话 Cookie 或「扩展连接码」（Authorization: Bearer，自定义/随机码哈希查表）二选一认证 */
 export async function authAny(req: Request, env: Env): Promise<UserRow | null> {
   const auth = req.headers.get('Authorization') ?? ''
   if (/^Bearer\s+/i.test(auth)) {
-    const payload = await jwtVerify<{ uid?: string; typ?: string; ver?: number }>(
-      auth.replace(/^Bearer\s+/i, ''),
-      secret(env),
-    )
-    if (!payload?.uid || payload.typ !== 'device') return null
-    const row = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(payload.uid).first<UserRow>()
+    const code = auth.replace(/^Bearer\s+/i, '').trim()
+    if (!code || code.length > 64) return null
+    const hash = await hashCode(code, secret(env))
+    const row = await env.DB.prepare('SELECT * FROM users WHERE device_code_hash = ?').bind(hash).first<UserRow>()
     if (!row || row.status !== 'active') return null
-    // 版本校验：重新生成连接码会使旧码立即失效
-    if ((row.device_token_ver ?? 0) !== (payload.ver ?? -1)) return null
+    if (row.device_code_expires_at && row.device_code_expires_at < Date.now()) return null
     return row
   }
   return getSessionUser(req, env)
@@ -131,6 +128,8 @@ export async function handleRegister(req: Request, env: Env): Promise<Response> 
     role: isFirstUser ? 'admin' : 'user',
     status: 'active',
     device_token_ver: 0,
+    device_code_hash: null,
+    device_code_expires_at: null,
     created_at: Date.now(),
     last_login_at: Date.now(),
   }
@@ -297,6 +296,8 @@ export async function handleOAuthComplete(req: Request, env: Env): Promise<Respo
     role: isFirstUser ? 'admin' : 'user',
     status: 'active',
     device_token_ver: 0,
+    device_code_hash: null,
+    device_code_expires_at: null,
     created_at: Date.now(),
     last_login_at: Date.now(),
   }

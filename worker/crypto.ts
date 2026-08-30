@@ -87,6 +87,12 @@ export function uid(): string {
   return crypto.randomUUID()
 }
 
+/** 扩展连接码指纹：SHA-256(全局密钥:码) 十六进制。只存指纹不存明文，全局密钥防库外暴力反推 */
+export async function hashCode(secret: string, code: string): Promise<string> {
+  const digest = await crypto.subtle.digest('SHA-256', enc.encode(`${secret}:${code}`))
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 const CODE_ALPHABET = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ' // 去掉易混淆字符
 export function randomCode(len = 8): string {
   const bytes = crypto.getRandomValues(new Uint8Array(len))

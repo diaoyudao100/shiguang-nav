@@ -51,9 +51,10 @@ export const api = {
   updateName: (name: string) => req<{ user: AuthUser }>('PUT', '/api/me', { name }),
   getData: () => req<{ data: NavData | null; updatedAt: number | null }>('GET', '/api/data'),
   putData: (data: NavData) => req<{ updatedAt: number }>('PUT', '/api/data', { data }),
-  /** 浏览器扩展连接码（长期设备令牌，用于一键收藏）；durationDays 天数，0 = 长期，重新生成使旧码失效 */
-  deviceToken: (durationDays: number) =>
-    req<{ token: string; expiresAt: number | null }>('POST', '/api/device-token', { durationDays }),
+  /** 浏览器扩展连接码（自定义 code 或留空随机；durationDays 天数，0 = 长期，生成即覆盖旧码）
+   *  服务端只存指纹，明码仅本次响应返回 */
+  deviceToken: (p: { code?: string; durationDays?: number }) =>
+    req<{ code: string; expiresAt: number | null }>('POST', '/api/device-token', p),
   admin: {
     overview: () => req<AdminOverview>('GET', '/api/admin/overview'),
     createInvite: (p: { maxUses: number; expiresInDays: number | null }) =>

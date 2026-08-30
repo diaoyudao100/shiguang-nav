@@ -22,6 +22,8 @@ export interface UserRow {
   role: 'admin' | 'user'
   status: 'active' | 'disabled'
   device_token_ver: number
+  device_code_hash: string | null
+  device_code_expires_at: number | null
   created_at: number
   last_login_at: number | null
 }

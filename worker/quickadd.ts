@@ -8,7 +8,7 @@
  */
 import type { NavData, Settings, Site } from '../src/types'
 import { authAny, authSecret, requireUser } from './auth'
-import { jwtSign, uid } from './crypto'
+import { hashCode, randomCode, uid } from './crypto'
 import { chatWithHeal, isAllowedTarget, normalizeBase } from './ai'
 import type { Env } from './util'
 import { fail, json, readJson } from './util'
@@ -254,21 +254,40 @@ async function aiEnrich(
 
 /* ---------------- 连接码 ---------------- */
 
-/** 扩展连接码：POST /api/device-token（需网页端登录，body.durationDays 可选）→ { token, expiresAt }
- *  expiresAt 为 null 表示长期有效；重新生成会使旧连接码立即失效（版本号 +1） */
+/** 扩展连接码：POST /api/device-token（需网页端登录）
+ *  body: { code?: string, durationDays?: number }
+ *  - code 提供且合法（8-64 字符、无空格）→ 自定义码；否则系统随机生成（12 位）
+ *  - 生成即覆盖旧码（旧码立即失效）；服务端只存 SHA-256 指纹，明码仅本次响应返回
+ *  → { code, expiresAt }（expiresAt 为 null 表示长期） */
 export async function handleDeviceToken(req: Request, env: Env): Promise<Response> {
   if (req.method !== 'POST') return fail('方法不允许', 405)
   const user = await requireUser(req, env)
   if (user instanceof Response) return user
-  const body = await readJson<{ durationDays?: number }>(req, 2_000)
+  const body = await readJson<{ code?: string; durationDays?: number }>(req, 2_000)
   const days = (DEVICE_DURATIONS as readonly number[]).includes(body?.durationDays ?? -1)
     ? (body!.durationDays as number)
     : 365
 
-  const ver = (user.device_token_ver ?? 0) + 1
-  await env.DB.prepare('UPDATE users SET device_token_ver = ? WHERE id = ?').bind(ver, user.id).run()
-  const token = await jwtSign({ uid: user.id, typ: 'device', ver }, authSecret(env), days * 86_400)
-  return json({ token, expiresAt: days > 0 ? Date.now() + days * 86_400_000 : null })
+  const custom = (body?.code ?? '').trim()
+  let code: string
+  if (custom) {
+    if (custom.length < 8 || custom.length > 64) return fail('自定义连接码长度需在 8-64 个字符之间')
+    if (/\s/.test(custom)) return fail('连接码不能包含空格')
+    code = custom
+  } else {
+    code = randomCode(12)
+  }
+
+  const hash = await hashCode(code, authSecret(env))
+  const taken = await env.DB.prepare('SELECT id FROM users WHERE device_code_hash = ?').bind(hash).first<{ id: string }>()
+  if (taken && taken.id !== user.id) return fail('该连接码已被其他账户占用，换一个试试')
+
+  const expiresAt = days > 0 ? Date.now() + days * 86_400_000 : null
+  await env.DB
+    .prepare('UPDATE users SET device_code_hash = ?, device_code_expires_at = ? WHERE id = ?')
+    .bind(hash, expiresAt, user.id)
+    .run()
+  return json({ code, expiresAt })
 }
 
 /** 连接码有效性预检（扩展「测试连接」用）：Bearer → { user }，无效返回 401 */

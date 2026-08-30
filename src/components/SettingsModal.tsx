@@ -69,6 +69,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
   })
   const [deviceToken, setDeviceToken] = useState('')
   const [deviceExpiry, setDeviceExpiry] = useState<number | null>(null)
+  const [codeInput, setCodeInput] = useState('')
   const [tokenDuration, setTokenDuration] = useState('365')
   const [tokenLoading, setTokenLoading] = useState(false)
 
@@ -213,15 +214,19 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
 
   const pinned = data.sites.filter((s) => s.pinned).length
 
-  /** 生成扩展连接码：长期设备令牌，粘贴进浏览器扩展即可一键收藏；重新生成使旧码立即失效 */
+  /** 生成扩展连接码：自定义（8-64 字符）或留空随机；服务端只存指纹，明码仅本次显示 */
   const genDeviceToken = async () => {
     setTokenLoading(true)
     try {
-      const { token, expiresAt } = await api.deviceToken(Number(tokenDuration) || 0)
-      setDeviceToken(token)
+      const { code, expiresAt } = await api.deviceToken({
+        code: codeInput.trim() || undefined,
+        durationDays: Number(tokenDuration) || 0,
+      })
+      setDeviceToken(code)
       setDeviceExpiry(expiresAt)
+      setCodeInput('')
       try {
-        await navigator.clipboard.writeText(token)
+        await navigator.clipboard.writeText(code)
         toast('连接码已生成并复制，请粘贴到扩展设置中')
       } catch {
         toast('连接码已生成，请手动复制')
@@ -234,8 +239,8 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
   }
 
   const expiryText = deviceExpiry
-    ? `有效期至 ${new Date(deviceExpiry).toLocaleDateString('zh-CN')}（重新生成将使旧连接码立即失效）`
-    : '长期有效（重新生成将使旧连接码立即失效）'
+    ? `有效期至 ${new Date(deviceExpiry).toLocaleDateString('zh-CN')}`
+    : '长期有效'
 
   return (
     <Modal open={open} title="设置" onClose={onClose} width="max-w-[560px]">
@@ -730,14 +735,22 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
                         复制
                       </button>
                     </div>
-                    <p className="mt-1.5 text-[11px] text-ink2">{expiryText}</p>
+                    <p className="mt-1.5 text-[11px] text-ink2">
+                      {expiryText}。服务端只存指纹，此码仅现在可见——请复制或牢记；再次生成将使旧码立即失效。
+                    </p>
                   </div>
                 )}
                 <div className="flex gap-2">
+                  <input
+                    value={codeInput}
+                    onChange={(e) => setCodeInput(e.target.value)}
+                    placeholder="自定义连接码（≥8 位），留空则随机"
+                    className={inputCls + ' h-9 min-w-0 flex-1 py-0 text-xs'}
+                  />
                   <select
                     value={tokenDuration}
                     onChange={(e) => setTokenDuration(e.target.value)}
-                    className={inputCls + ' h-9 w-32 py-0'}
+                    className={inputCls + ' h-9 w-[104px] py-0'}
                     aria-label="连接码有效时长"
                   >
                     <option value="365">1 年有效</option>
@@ -750,10 +763,10 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
                     type="button"
                     onClick={genDeviceToken}
                     disabled={tokenLoading}
-                    className="btn-ghost h-9 flex-1 !py-0 text-xs"
+                    className="btn-ghost h-9 shrink-0 !px-3.5 !py-0 text-xs"
                   >
                     <IconKey width={13} height={13} />
-                    {tokenLoading ? '生成中…' : deviceToken ? '重新生成连接码' : '生成扩展连接码'}
+                    {tokenLoading ? '生成中…' : deviceToken ? '生成新码' : '生成连接码'}
                   </button>
                 </div>
               </>
