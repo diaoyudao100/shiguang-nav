@@ -88,3 +88,7 @@ npm run cf:dev              # 构建并启动 Worker（http://localhost:8787，�
 - 仅供内部小范围使用：邀请码是唯一准入门槛，请勿用于公开服务
 - 密码哈希迭代次数为兼容 Workers 免费版 10ms CPU 限制设为 12,000，付费版可调高（`worker/crypto.ts`）
 - 同一浏览器多账户共享 localStorage 空间，本应用已按账户隔离本地缓存，但对隐私要求高时建议不同账户使用不同浏览器配置
+
+## 自动部署
+
+推送到 main 分支后，Cloudflare Workers Builds 会自动构建并部署（构建命令 `npm run build`，部署命令 `npx wrangler deploy`）。
