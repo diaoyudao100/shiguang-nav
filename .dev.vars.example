@@ -1,0 +1,18 @@
+# 复制为 .dev.vars 用于本地 wrangler dev（不要提交到 git）
+# 会话签名密钥：随意长随机串
+JWT_SECRET=dev-secret-change-me
+
+# Google OAuth（console.cloud.google.com → 凭据 → OAuth 客户端）
+# 回调地址填 http://localhost:8787/api/auth/oauth/google/callback
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
+
+# Linux.do Connect（connect.linux.dev 应用设置）
+# 回调地址填 http://localhost:8787/api/auth/oauth/linuxdo/callback
+# LINUXDO_CLIENT_ID=
+# LINUXDO_CLIENT_SECRET=
+
+# 微信开放平台「网站应用」（open.weixin.qq.com，需企业资质）
+# 回调域名需与网站应用授权域名一致
+# WECHAT_CLIENT_ID=
+# WECHAT_CLIENT_SECRET=
