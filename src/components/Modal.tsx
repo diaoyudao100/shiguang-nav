@@ -63,7 +63,8 @@ export function Modal({
           </button>
         </div>
         <div className="border-t border-line" />
-        <div className="overflow-y-auto px-5 py-5">{children}</div>
+        {/* min-h-0：flex 子项默认 min-height 为内容高度，缺了它内容超高时不会滚动而是被硬裁 */}
+        <div className="min-h-0 overflow-y-auto px-5 py-5">{children}</div>
       </div>
     </div>
   )
