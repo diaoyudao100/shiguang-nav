@@ -82,8 +82,9 @@ async function captureItem(item) {
     if (data.duplicate) {
       notify(`「${data.site?.name || item.url}」已在导航站中，未重复添加。`, '拾光导航 · 已存在')
     } else {
-      const extra = data.descSource === 'ai' ? '，AI 简述已生成' : data.descSource === 'meta' ? '' : ''
-      notify(`「${data.site?.name || item.url}」已加入导航站${extra}`, '拾光导航 · 收藏成功')
+      const extra = data.descSource === 'ai' ? '，AI 简述已生成' : ''
+      const cat = data.category ? `，已归入「${data.category}」` : ''
+      notify(`「${data.site?.name || item.url}」已加入导航站${cat}${extra}`, '拾光导航 · 收藏成功')
     }
     flushQueue() // 有暂存时顺带补传
   } catch {

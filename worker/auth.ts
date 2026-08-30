@@ -54,10 +54,16 @@ export async function requireUser(req: Request, env: Env): Promise<UserRow | Res
 export async function authAny(req: Request, env: Env): Promise<UserRow | null> {
   const auth = req.headers.get('Authorization') ?? ''
   if (/^Bearer\s+/i.test(auth)) {
-    const payload = await jwtVerify<{ uid?: string; typ?: string }>(auth.replace(/^Bearer\s+/i, ''), secret(env))
+    const payload = await jwtVerify<{ uid?: string; typ?: string; ver?: number }>(
+      auth.replace(/^Bearer\s+/i, ''),
+      secret(env),
+    )
     if (!payload?.uid || payload.typ !== 'device') return null
     const row = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(payload.uid).first<UserRow>()
-    return row && row.status === 'active' ? row : null
+    if (!row || row.status !== 'active') return null
+    // 版本校验：重新生成连接码会使旧码立即失效
+    if ((row.device_token_ver ?? 0) !== (payload.ver ?? -1)) return null
+    return row
   }
   return getSessionUser(req, env)
 }
@@ -124,6 +130,7 @@ export async function handleRegister(req: Request, env: Env): Promise<Response> 
     avatar: null,
     role: isFirstUser ? 'admin' : 'user',
     status: 'active',
+    device_token_ver: 0,
     created_at: Date.now(),
     last_login_at: Date.now(),
   }
@@ -289,6 +296,7 @@ export async function handleOAuthComplete(req: Request, env: Env): Promise<Respo
     avatar: identity.avatar,
     role: isFirstUser ? 'admin' : 'user',
     status: 'active',
+    device_token_ver: 0,
     created_at: Date.now(),
     last_login_at: Date.now(),
   }

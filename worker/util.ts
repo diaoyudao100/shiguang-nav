@@ -21,6 +21,7 @@ export interface UserRow {
   avatar: string | null
   role: 'admin' | 'user'
   status: 'active' | 'disabled'
+  device_token_ver: number
   created_at: number
   last_login_at: number | null
 }

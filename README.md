@@ -21,8 +21,8 @@
 ### 浏览器扩展 · 一键收藏（v2.1 新增）
 在任意网页**一键收藏到导航站**：点扩展图标、按 `Alt+S` 或右键菜单，整条链路自动完成——
 
-- **自动补全**：带上页面标题 → 服务端去重（忽略大小写与结尾斜杠）→ 服务端抓取页面 `<title>` / meta description 兜底 → 用你配置的 AI 生成一句简介（复用模型自动纠正并回写）→ 图标按域名自动获取
-- **无需保持导航站打开**：扩展与后端通过「连接码」（`设置 → 数据 → 浏览器扩展` 里生成的一年期设备令牌，`Authorization: Bearer`）通信，站点地址可在扩展选项里更改
+- **自动补全**：带上页面标题 → 服务端去重（忽略大小写与结尾斜杠）→ 服务端抓取页面 `<title>` / meta description 兜底 → 用你配置的 AI 生成一句简介并**自动归入最合适的现有分类**（复用模型自动纠正并回写；AI 未配置/失败时回退 meta description 与第一个分类）→ 图标按域名自动获取
+- **无需保持导航站打开**：扩展与后端通过「连接码」（`设置 → 数据 → 浏览器扩展` 里生成的设备令牌，`Authorization: Bearer`）通信，时长可选 1 / 5 / 10 / 20 年或长期，重新生成即作废旧码；站点地址可在扩展选项里更改
 - **离线暂存**：未连接 / 断网时自动暂存在扩展本地并显示角标，连接恢复后自动补传；重复 URL 提示已存在、不重复添加
 
 安装（免上架，本地加载）：
@@ -40,6 +40,9 @@ npx wrangler d1 create shiguang-nav
 
 # 2. 初始化远程数据库表结构
 npm run cf:db:init
+
+# 2b. 老库升级（2026-08-30 前建过表的执行一次；新库跳过）
+npx wrangler d1 execute shiguang-nav --remote --command "ALTER TABLE users ADD COLUMN device_token_ver INTEGER NOT NULL DEFAULT 0"
 
 # 3. 配置会话密钥（必填）
 npx wrangler secret put JWT_SECRET   # 输入一串长随机字符

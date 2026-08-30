@@ -23,7 +23,10 @@ async function hmacKey(secret: string): Promise<CryptoKey> {
 
 export async function jwtSign(payload: Record<string, unknown>, secret: string, ttlSec: number): Promise<string> {
   const header = b64urlEncode(enc.encode(JSON.stringify({ alg: 'HS256', typ: 'JWT' })))
-  const body = b64urlEncode(enc.encode(JSON.stringify({ ...payload, exp: Math.floor(Date.now() / 1000) + ttlSec })))
+  // ttlSec 非正数 / 无穷 = 永不过期（不写入 exp）
+  const withExp =
+    Number.isFinite(ttlSec) && ttlSec > 0 ? { ...payload, exp: Math.floor(Date.now() / 1000) + ttlSec } : payload
+  const body = b64urlEncode(enc.encode(JSON.stringify(withExp)))
   const data = `${header}.${body}`
   const sig = await crypto.subtle.sign('HMAC', await hmacKey(secret), enc.encode(data))
   return `${data}.${b64urlEncode(new Uint8Array(sig))}`

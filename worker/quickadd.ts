@@ -12,8 +12,10 @@ import { chatWithHeal, isAllowedTarget, normalizeBase } from './ai'
 import type { Env, UserRow } from './util'
 import { fail, json, readJson } from './util'
 
-const DEVICE_TTL = 365 * 24 * 3600 // 连接码有效期 1 年
 const META_TIMEOUT_MS = 6_000
+
+/** 连接码可选时长（天）；0 = 长期 */
+const DEVICE_DURATIONS = [365, 1825, 3650, 7300, 0]
 
 interface QuickAddBody {
   url?: string
@@ -29,13 +31,21 @@ function corsHeaders(req: Request): Record<string, string> {
   return {}
 }
 
-/** 扩展连接码：POST /api/device-token（需网页端登录）→ { token } */
+/** 扩展连接码：POST /api/device-token（需网页端登录，body.durationDays 可选）→ { token, expiresAt }
+ *  expiresAt 为 null 表示长期有效；重新生成会使旧连接码立即失效（版本号 +1） */
 export async function handleDeviceToken(req: Request, env: Env): Promise<Response> {
   if (req.method !== 'POST') return fail('方法不允许', 405)
   const user = await requireUser(req, env)
   if (user instanceof Response) return user
-  const token = await jwtSign({ uid: user.id, typ: 'device' }, authSecret(env), DEVICE_TTL)
-  return json({ token })
+  const body = await readJson<{ durationDays?: number }>(req, 2_000)
+  const days = (DEVICE_DURATIONS as readonly number[]).includes(body?.durationDays ?? -1)
+    ? (body!.durationDays as number)
+    : 365
+
+  const ver = (user.device_token_ver ?? 0) + 1
+  await env.DB.prepare('UPDATE users SET device_token_ver = ? WHERE id = ?').bind(ver, user.id).run()
+  const token = await jwtSign({ uid: user.id, typ: 'device', ver }, authSecret(env), days * 86_400)
+  return json({ token, expiresAt: days > 0 ? Date.now() + days * 86_400_000 : null })
 }
 
 /** 连接码有效性预检（扩展「测试连接」用）：Bearer → { user }，无效返回 401 */
@@ -203,25 +213,47 @@ export async function handleQuickAdd(req: Request, env: Env): Promise<Response> 
 
   let name = ((body?.title ?? '').trim() || meta?.title || parsed.hostname).replace(/\s+/g, ' ').slice(0, 60)
 
-  // AI 简述：使用该用户自己的 AI 配置（含模型自动纠正）；未配置或失败回退 meta description
+  // AI：一句简介 + 自动归类（从用户现有分类里选）。未配置或失败回退 meta description / 第一个分类
   const s = data.settings as Settings
   let desc = ''
   let descSource: 'ai' | 'meta' | 'none' = 'none'
+  let aiCategory = ''
   const aiKey = (s.aiKey ?? '').trim()
   if (aiKey) {
     const provider = s.aiProvider === 'gemini' ? 'gemini' : 'openai'
     const base = normalizeBase(provider, s.aiBaseURL ?? '')
     if (isAllowedTarget(base)) {
       const model = (s.aiModel ?? '').trim() || (provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.0-flash')
-      const prompt = `为网站「${name}」（${url}，域名 ${parsed.hostname}）写一句中文简介，不超过 24 个字，直接输出简介本身，不要任何前后缀和标点引导。`
+      const categoryNames = data.categories.map((c) => c.name).filter(Boolean)
+      const prompt = [
+        `给定网站「${name}」（${url}，域名 ${parsed.hostname}）。`,
+        categoryNames.length ? `分类列表：${categoryNames.join('、')}。` : '',
+        '请完成两件事：1. 为该网站写一句中文简介，不超过 24 个字；2. 从分类列表中选一个最合适的分类名（必须原样使用列表中的名称；若列表为空或都不合适，选最接近的一个）。',
+        '严格以 JSON 返回：{"desc":"...","category":"..."}，不要输出任何其他内容。',
+      ]
+        .filter(Boolean)
+        .join('\n')
       try {
-        const r = await chatWithHeal(provider, base, aiKey, model, '你是一个网址导航助手，只输出简介文本。', prompt)
-        desc = r.text
+        const r = await chatWithHeal(provider, base, aiKey, model, '你是一个网址导航助手，只输出 JSON。', prompt)
+        const raw = r.text
           .replace(/<think>[\s\S]*?<\/think>/gi, '')
           .trim()
           .replace(/^["「『]|["」』]$/g, '')
           .trim()
-          .slice(0, 60)
+        const m = raw.match(/\{[\s\S]*\}/)
+        if (m) {
+          try {
+            const obj = JSON.parse(m[0]) as { desc?: string; category?: string }
+            desc = String(obj.desc ?? '')
+              .replace(/^["「『]|["」』]$/g, '')
+              .trim()
+              .slice(0, 60)
+            aiCategory = String(obj.category ?? '').trim().slice(0, 30)
+          } catch {
+            /* JSON 损坏 → 按纯文本当简介用 */
+          }
+        }
+        if (!desc && raw) desc = raw.slice(0, 60)
         if (desc) descSource = 'ai'
         // 模型被自动纠正：回写到用户设置，后续请求直接用正确模型
         if (r.model && r.model !== (s.aiModel ?? '').trim()) s.aiModel = r.model
@@ -235,8 +267,14 @@ export async function handleQuickAdd(req: Request, env: Env): Promise<Response> 
     descSource = 'meta'
   }
 
-  // 分类：请求指定 → 第一个分类 → 新建「默认」
+  // 分类：请求指定 → AI 归类（匹配现有分类名）→ 第一个分类 → 新建「默认」
   let categoryId = body?.categoryId && data.categories.some((c) => c.id === body.categoryId) ? body.categoryId : ''
+  if (!categoryId && aiCategory) {
+    const hit = data.categories.find(
+      (c) => c.name.trim() === aiCategory || c.name.trim().toLowerCase() === aiCategory.toLowerCase(),
+    )
+    if (hit) categoryId = hit.id
+  }
   if (!categoryId) categoryId = data.categories[0]?.id ?? ''
   if (!categoryId) {
     const c = { id: uid(), name: '默认' }
@@ -266,5 +304,6 @@ export async function handleQuickAdd(req: Request, env: Env): Promise<Response> 
     )
     .bind(user.id, JSON.stringify(data), now)
     .run()
-  return json({ site, categoryId, descSource }, 200, corsHeaders(req))
+  const categoryName = data.categories.find((c) => c.id === categoryId)?.name ?? ''
+  return json({ site, categoryId, category: categoryName, descSource }, 200, corsHeaders(req))
 }

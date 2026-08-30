@@ -45,8 +45,13 @@ http
           )
           return
         }
+        // quick-add 的提示词要求 JSON（简介 + 自动归类）；body 是 JSON 转义过的，引号带反斜杠
+        const wantJson = /category/.test(body)
+        const text = wantJson
+          ? '{"desc":"mock 简介","category":"开发工具"}'
+          : `mock-ok via ${model}`
         res.writeHead(200, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({ choices: [{ message: { content: `mock-ok via ${model}` } }] }))
+        res.end(JSON.stringify({ choices: [{ message: { content: text } }]}))
         return
       }
       res.writeHead(404)

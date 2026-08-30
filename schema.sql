@@ -1,14 +1,15 @@
 -- 拾光导航 D1 数据库结构
 CREATE TABLE IF NOT EXISTS users (
-  id            TEXT PRIMARY KEY,
-  email         TEXT UNIQUE,
-  password_hash TEXT,
-  name          TEXT NOT NULL,
-  avatar        TEXT,
-  role          TEXT NOT NULL DEFAULT 'user',   -- 'admin' | 'user'
-  status        TEXT NOT NULL DEFAULT 'active', -- 'active' | 'disabled'
-  created_at    INTEGER NOT NULL,
-  last_login_at INTEGER
+  id               TEXT PRIMARY KEY,
+  email            TEXT UNIQUE,
+  password_hash    TEXT,
+  name             TEXT NOT NULL,
+  avatar           TEXT,
+  role             TEXT NOT NULL DEFAULT 'user',   -- 'admin' | 'user'
+  status           TEXT NOT NULL DEFAULT 'active', -- 'active' | 'disabled'
+  device_token_ver INTEGER NOT NULL DEFAULT 0,     -- 扩展连接码版本，重新生成即作废旧码
+  created_at       INTEGER NOT NULL,
+  last_login_at    INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS oauth_identities (
