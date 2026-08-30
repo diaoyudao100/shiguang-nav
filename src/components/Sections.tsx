@@ -2,7 +2,8 @@ import { useState } from 'react'
 import type { Category, Site } from '../types'
 import { useStore } from '../hooks/useStore'
 import { SiteCard } from './SiteCard'
-import { IconEyeOff, IconFolder, IconPin, IconPlus } from './icons'
+import { categoryIcon } from '../lib/categoryIcons'
+import { IconEyeOff, IconPin, IconPlus } from './icons'
 
 export interface DragState {
   id: string | null
@@ -178,10 +179,11 @@ export function Sections({ drag, setDrag, query, activeCat, onEditSite, onAddToC
 }
 
 function SectionHeader({ cat, count, onAdd }: { cat: Category; count: number; onAdd: () => void }) {
+  const CatIcon = categoryIcon(cat.icon)
   return (
     <div className="mb-3.5 flex items-center gap-2.5">
       <span className="flex h-6 w-6 items-center justify-center rounded-md border border-line bg-surface text-ink2 shadow-sm">
-        <IconFolder width={12} height={12} />
+        <CatIcon width={12} height={12} />
       </span>
       <h2 className="text-[15px] tracking-wide">{cat.name}</h2>
       <span className="rounded-full bg-hover px-1.5 py-px text-[11px] font-normal tabular-nums text-ink2">

@@ -1,6 +1,7 @@
 export interface Category {
   id: string
   name: string
+  icon?: string // lucide 图标名（kebab-case），空/未设置 = 回退 Folder
 }
 
 export interface Site {

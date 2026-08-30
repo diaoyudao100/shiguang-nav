@@ -163,7 +163,7 @@ function defaultSettings(): Settings {
 function freshData(): NavData {
   return {
     version: 1,
-    categories: [{ id: 'c-default', name: '默认' }],
+    categories: [{ id: 'c-default', name: '默认', icon: 'folder' }],
     sites: [],
     settings: defaultSettings(),
   }

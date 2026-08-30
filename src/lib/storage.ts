@@ -35,12 +35,12 @@ export const ACCENT_ALIAS: Record<string, string> = {
 }
 
 const SEED_CATEGORIES: Category[] = [
-  { id: 'c-often', name: '常用推荐' },
-  { id: 'c-dev', name: '开发工具' },
-  { id: 'c-design', name: '设计资源' },
-  { id: 'c-read', name: '阅读资讯' },
-  { id: 'c-fun', name: '休闲娱乐' },
-  { id: 'c-ai', name: '人工智能' },
+  { id: 'c-often', name: '常用推荐', icon: 'star' },
+  { id: 'c-dev', name: '开发工具', icon: 'code' },
+  { id: 'c-design', name: '设计资源', icon: 'palette' },
+  { id: 'c-read', name: '阅读资讯', icon: 'book-open' },
+  { id: 'c-fun', name: '休闲娱乐', icon: 'gamepad-2' },
+  { id: 'c-ai', name: '人工智能', icon: 'bot' },
 ]
 
 function site(
@@ -109,11 +109,31 @@ export function saveData(data: NavData): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
 }
 
+/** 常见分类名 → 建议图标（首次迁移补 icon 字段时套用，之后用户改动不再覆盖） */
+const CAT_ICON_SUGGEST: Record<string, string> = {
+  常用推荐: 'star', 常用: 'star',
+  开发工具: 'code', 开发: 'code', 编程: 'code',
+  设计资源: 'palette', 设计: 'palette',
+  阅读资讯: 'book-open', 阅读: 'book-open', 资讯: 'book-open', 新闻: 'newspaper',
+  休闲娱乐: 'gamepad-2', 娱乐: 'gamepad-2', 游戏: 'gamepad-2',
+  人工智能: 'bot', AI: 'bot',
+  学习教育: 'graduation-cap', 学习: 'graduation-cap', 教育: 'graduation-cap',
+  工具: 'wrench', 影视: 'film', 音乐: 'music', 购物: 'shopping-cart',
+  社交: 'message-circle', 办公: 'briefcase', 金融: 'credit-card', 邮箱: 'mail',
+  导航: 'compass', 网盘: 'cloud', 搜索: 'search', 生活: 'coffee', 健康: 'heart-pulse',
+}
+
 /** 宽松的字段修补，保证结构完整 */
 function migrate(data: Partial<NavData>): NavData {
   const base = defaultData()
   const categories = Array.isArray(data.categories)
-    ? data.categories.filter((c) => c && typeof c.id === 'string' && typeof c.name === 'string')
+    ? data.categories
+        .filter((c) => c && typeof c.id === 'string' && typeof c.name === 'string')
+        .map((c) => ({
+          ...c,
+          // 旧数据没有 icon 字段：按常见分类名补一个建议图标
+          icon: typeof c.icon === 'string' ? c.icon : (CAT_ICON_SUGGEST[c.name.trim()] ?? ''),
+        }))
     : base.categories
   const sites = Array.isArray(data.sites)
     ? data.sites

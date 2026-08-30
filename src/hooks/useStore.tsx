@@ -30,8 +30,9 @@ interface StoreCtx {
   deleteSite: (id: string) => void
   togglePin: (id: string) => void
   toggleHidden: (id: string) => void
-  addCategory: (name: string) => Category | null
+  addCategory: (name: string, icon?: string) => Category | null
   renameCategory: (id: string, name: string) => void
+  setCategoryIcon: (id: string, icon: string) => void
   deleteCategory: (id: string) => void
   moveCategory: (id: string, dir: -1 | 1) => void
   /** 拖拽落点：把站点移动到某个分类网格的 anchor 之前/之后（或末尾） */
@@ -305,11 +306,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
           return d
         }),
-      addCategory: (name) => {
+      addCategory: (name, icon) => {
         const trimmed = name.trim()
         if (!trimmed) return null
         if (data.categories.some((c) => c.name === trimmed)) return null
-        const cat: Category = { id: 'cat-' + uid(), name: trimmed }
+        const cat: Category = { id: 'cat-' + uid(), name: trimmed, icon: icon || '' }
         mutate((d) => {
           d.categories.push(cat)
           return d
@@ -320,6 +321,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         mutate((d) => {
           const c = d.categories.find((x) => x.id === id)
           if (c && name.trim()) c.name = name.trim()
+          return d
+        }),
+      setCategoryIcon: (id, icon) =>
+        mutate((d) => {
+          const c = d.categories.find((x) => x.id === id)
+          if (c) c.icon = icon
           return d
         }),
       deleteCategory: (id) =>

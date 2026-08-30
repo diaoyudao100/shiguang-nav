@@ -9,14 +9,24 @@ interface ModalProps {
   children: ReactNode
   width?: string
   headerExtra?: ReactNode
+  /** 弹窗之上还会叠一层选择器时，关掉本层的 Esc 关闭，让 Esc 只关最上层 */
+  closeOnEsc?: boolean
 }
 
-export function Modal({ open, title, onClose, children, width = 'max-w-lg', headerExtra }: ModalProps) {
+export function Modal({
+  open,
+  title,
+  onClose,
+  children,
+  width = 'max-w-lg',
+  headerExtra,
+  closeOnEsc = true,
+}: ModalProps) {
   const { data } = useStore()
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (closeOnEsc && e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
@@ -24,7 +34,7 @@ export function Modal({ open, title, onClose, children, width = 'max-w-lg', head
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = ''
     }
-  }, [open, onClose])
+  }, [open, onClose, closeOnEsc])
 
   if (!open) return null
   return (

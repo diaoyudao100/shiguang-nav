@@ -1,4 +1,6 @@
+import { LayoutGrid } from 'lucide-react'
 import { useStore } from '../hooks/useStore'
+import { categoryIcon } from '../lib/categoryIcons'
 import { IconFolder, IconPin, IconSettings } from './icons'
 
 interface SidebarProps {
@@ -56,6 +58,7 @@ export function Sidebar({
               onCloseMobile()
             }}
           >
+            <LayoutGrid width={13} height={13} className={null === activeCat ? '' : 'opacity-70'} />
             全部网站
             <span className="ml-auto text-xs tabular-nums text-ink">
               {data.sites.filter((s) => !s.hidden).length}
@@ -74,24 +77,28 @@ export function Sidebar({
             置顶网站
             <span className="ml-auto text-xs tabular-nums text-ink">{pinnedCount}</span>
           </button>
-          {data.categories.map((c) => (
-            <button
-              key={c.id}
-              className={`${itemCls(activeCat === c.id)} ${dragActiveId ? 'ring-2 ring-transparent' : ''}`}
-              onClick={() => {
-                onSelect(c.id)
-                onCloseMobile()
-              }}
-              onDragOver={(e) => dragActiveId && e.preventDefault()}
-              onDrop={() => dragActiveId && onDropToCategory(c.id)}
-            >
-              {activeCat === c.id && (
-                <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-gradient-to-b from-[var(--c-accent)] to-[var(--c-accent2)]" />
-              )}
-              <span className="truncate">{c.name}</span>
-              <span className="ml-auto shrink-0 text-xs tabular-nums text-ink">{countOf(c.id)}</span>
-            </button>
-          ))}
+          {data.categories.map((c) => {
+            const CatIcon = categoryIcon(c.icon)
+            return (
+              <button
+                key={c.id}
+                className={`${itemCls(activeCat === c.id)} ${dragActiveId ? 'ring-2 ring-transparent' : ''}`}
+                onClick={() => {
+                  onSelect(c.id)
+                  onCloseMobile()
+                }}
+                onDragOver={(e) => dragActiveId && e.preventDefault()}
+                onDrop={() => dragActiveId && onDropToCategory(c.id)}
+              >
+                {activeCat === c.id && (
+                  <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-gradient-to-b from-[var(--c-accent)] to-[var(--c-accent2)]" />
+                )}
+                <CatIcon width={13} height={13} className={activeCat === c.id ? '' : 'opacity-70'} />
+                <span className="truncate">{c.name}</span>
+                <span className="ml-auto shrink-0 text-xs tabular-nums text-ink">{countOf(c.id)}</span>
+              </button>
+            )
+          })}
         </nav>
         <p className="mt-auto px-2 pt-8 text-xs leading-5 text-ink2/60">
           数据保存在浏览器本地
