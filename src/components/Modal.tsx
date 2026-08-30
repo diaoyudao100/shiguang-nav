@@ -84,5 +84,11 @@ export function Field({ label, children, hint }: { label: string; children: Reac
 export const inputCls =
   'w-full rounded-[10px] border border-line bg-base/60 px-3 py-2.5 text-[13px] text-ink outline-none transition-all placeholder:text-ink2/50 hover:border-line-strong focus:border-accent/50 focus:bg-surface focus:ring-4 focus:ring-accent/10'
 
+/** 紧凑输入框/下拉框：外观同 inputCls 但不含 py-2.5 —— 用于 h-9 等固定矮高度的场合
+ *  （在 inputCls 上叠 py-0 会被 Tailwind 的样式顺序翻转成 py-2.5，中文文字底部会被裁掉）。
+ *  select 需自行配 leading-[高度-2px] 让文字垂直居中，如 h-9 → leading-[34px] */
+export const compactCls =
+  'rounded-[10px] border border-line bg-base/60 px-3 text-[13px] text-ink outline-none transition-all placeholder:text-ink2/50 hover:border-line-strong focus:border-accent/50 focus:bg-surface focus:ring-4 focus:ring-accent/10'
+
 export const btnPrimary = 'btn-primary'
 export const btnGhost = 'btn-ghost'

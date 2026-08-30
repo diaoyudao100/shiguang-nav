@@ -4,7 +4,7 @@ import { useTheme } from '../hooks/useTheme'
 import { useAuth } from '../hooks/useAuth'
 import { generateLetterIcon } from '../lib/favicon'
 import { api } from '../lib/api'
-import { Field, Modal, inputCls } from './Modal'
+import { Field, Modal, compactCls, inputCls } from './Modal'
 import { useToast } from './Toast'
 import { aiListModels, aiTestConnection, aiDescribeSite } from '../lib/ai'
 import type { Settings, ThemeMode } from '../types'
@@ -294,7 +294,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
               <div className="min-w-0 flex-1">
                 <div className="flex gap-1.5">
                   <input
-                    className={inputCls + ' h-9 min-w-0 flex-1 truncate py-0 font-mono text-[11px]'}
+                    className={compactCls + ' h-9 min-w-0 flex-1 truncate font-mono text-[11px]'}
                     value={form.favicon}
                     onChange={(e) => setForm({ ...form, favicon: e.target.value })}
                     placeholder="图标链接，留空使用内置默认"
@@ -720,7 +720,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
                         readOnly
                         value={deviceToken}
                         onFocus={(e) => e.currentTarget.select()}
-                        className={inputCls + ' h-9 min-w-0 flex-1 py-0 font-mono text-[11px]'}
+                        className={compactCls + ' h-9 min-w-0 flex-1 font-mono text-[11px]'}
                       />
                       <button
                         type="button"
@@ -745,12 +745,12 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
                     value={codeInput}
                     onChange={(e) => setCodeInput(e.target.value)}
                     placeholder="自定义连接码（≥8 位），留空则随机"
-                    className={inputCls + ' h-9 min-w-0 flex-1 py-0 text-xs'}
+                    className={compactCls + ' h-9 min-w-0 flex-1 text-xs'}
                   />
                   <select
                     value={tokenDuration}
                     onChange={(e) => setTokenDuration(e.target.value)}
-                    className={inputCls + ' h-9 w-[104px] py-0'}
+                    className={compactCls + ' h-9 w-[104px] leading-[34px]'}
                     aria-label="连接码有效时长"
                   >
                     <option value="365">1 年有效</option>

@@ -1,5 +1,5 @@
 /** 分类图标选择器：lucide 图标库网格 + 中英文搜索 + 当前选择预览（参考元启导航交互） */
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Search } from 'lucide-react'
 import { CATEGORY_ICONS, categoryIcon, categoryIconLabel } from '../lib/categoryIcons'
 import { Modal, btnPrimary } from './Modal'
@@ -16,12 +16,14 @@ interface IconPickerProps {
 export function IconPicker({ open, value, onPick, onClose }: IconPickerProps) {
   const [q, setQ] = useState('')
   const [selected, setSelected] = useState(value)
+  const searchRef = useRef<HTMLInputElement>(null)
 
-  // 每次打开重置为当前值
+  // 每次打开重置为当前值；聚焦搜索框但禁止滚动（矮窗口下 autoFocus 会把弹窗内容顶出视野）
   useEffect(() => {
     if (open) {
       setSelected(value)
       setQ('')
+      requestAnimationFrame(() => searchRef.current?.focus({ preventScroll: true }))
     }
   }, [open, value])
 
@@ -42,7 +44,7 @@ export function IconPicker({ open, value, onPick, onClose }: IconPickerProps) {
       <div className="relative mb-3">
         <Search width={14} height={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink2/60" />
         <input
-          autoFocus
+          ref={searchRef}
           className="w-full rounded-[10px] border border-line bg-base/60 py-2.5 pl-9 pr-3 text-[13px] text-ink outline-none transition-all placeholder:text-ink2/50 hover:border-line-strong focus:border-accent/50 focus:bg-surface focus:ring-4 focus:ring-accent/10"
           placeholder="搜索图标：星 / 代码 / 游戏 / star / code…"
           value={q}
@@ -66,8 +68,8 @@ export function IconPicker({ open, value, onPick, onClose }: IconPickerProps) {
         </button>
       </div>
 
-      {/* 图标网格 */}
-      <div className="grid max-h-[288px] grid-cols-6 gap-1 overflow-y-auto rounded-xl border border-line bg-base/50 p-2 sm:grid-cols-8">
+      {/* 图标网格：矮窗口下按视口高度收缩，保证标题和底部按钮始终可见 */}
+      <div className="grid max-h-[min(288px,34vh)] grid-cols-6 gap-1 overflow-y-auto rounded-xl border border-line bg-base/50 p-2 sm:grid-cols-8">
         {list.map((d) => {
           const active = selected === d.name
           return (

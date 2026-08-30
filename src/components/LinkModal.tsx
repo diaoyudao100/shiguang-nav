@@ -3,7 +3,7 @@ import type { Site } from '../types'
 import { useStore } from '../hooks/useStore'
 import { aiConfigured, aiDescribeSite } from '../lib/ai'
 import { faviconUrl, hostOf, isLikelyUrl, normalizeUrl } from '../lib/favicon'
-import { Field, Modal, inputCls } from './Modal'
+import { Field, Modal, compactCls, inputCls } from './Modal'
 import { IconEyeOff, IconImage, IconPin, IconSparkles, IconTrash, IconUpload } from './icons'
 import { useToast } from './Toast'
 
@@ -299,7 +299,7 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
             </button>
           )}
           <select
-            className={inputCls + ' ms-auto h-9 w-28 py-0 text-xs'}
+            className={compactCls + ' ms-auto h-9 w-28 text-xs leading-[34px]'}
             value={form.categoryId}
             onChange={(e) => set({ categoryId: e.target.value })}
             aria-label="分类"
@@ -380,7 +380,7 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
               <div className="min-w-0 flex-1">
                 <div className="flex gap-1.5">
                   <input
-                    className={inputCls + ' h-9 min-w-0 flex-1 py-0 text-xs'}
+                    className={compactCls + ' h-9 min-w-0 flex-1 text-xs'}
                     value={form.autoIcon ? '' : form.iconUrl}
                     disabled={form.autoIcon}
                     onChange={(e) => set({ iconUrl: e.target.value })}
@@ -453,7 +453,7 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
                 />
               </label>
               <input
-                className={inputCls + ' h-8 w-28 py-0 font-mono text-xs'}
+                className={compactCls + ' h-8 w-28 font-mono text-xs'}
                 value={color}
                 onChange={(e) => set({ iconColor: e.target.value })}
                 placeholder="#RRGGBB"
