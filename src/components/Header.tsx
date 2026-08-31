@@ -3,6 +3,7 @@ import { useStore } from '../hooks/useStore'
 import { useTheme } from '../hooks/useTheme'
 import { useAuth } from '../hooks/useAuth'
 import { AccountMenu } from './AccountMenu'
+import { BrandLogo } from './BrandLogo'
 import { SearchBar } from './SearchBar'
 import { IconMenu, IconMonitor, IconMoon, IconPlus, IconSettings, IconSun } from './icons'
 
@@ -105,10 +106,7 @@ export function Header({ onAdd, onSettings, onToggleSidebar, search }: HeaderPro
         </button>
 
         <div className="flex shrink-0 items-center gap-3">
-          <div className="relative flex h-10 w-10 items-center justify-center rounded-[13px] bg-gradient-to-br from-[var(--c-accent)] to-[var(--c-accent2)] text-[18px] font-semibold text-white shadow-[var(--shadow-glow)]">
-            <span className="drop-shadow-sm">{brand.charAt(0)}</span>
-            <span className="pointer-events-none absolute inset-0 rounded-[13px] ring-1 ring-inset ring-white/25" />
-          </div>
+          <BrandLogo boxCls="h-10 w-10 rounded-[13px]" letterCls="text-[18px]" title={brand} />
           <div className="leading-tight">
             <div className="text-[18px] font-semibold tracking-tight">{brand}</div>
             <div className="mt-0.5 hidden text-[11px] tracking-[0.28em] text-ink2/75 xl:block">

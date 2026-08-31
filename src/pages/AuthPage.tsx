@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { useStore } from '../hooks/useStore'
 import { navigate } from '../lib/router'
 import { Field, inputCls } from '../components/Modal'
+import { BrandLogo } from '../components/BrandLogo'
 import { useToast } from '../components/Toast'
 import { IconGoogle, IconLinuxdo, IconMail, IconWechat } from '../components/icons'
 
@@ -114,10 +115,7 @@ export function AuthPage() {
     <div className="flex min-h-screen flex-col items-center justify-center px-4 py-10">
       {/* 品牌 */}
       <button onClick={() => navigate('/')} className="mb-7 flex items-center gap-3">
-        <div className="relative flex h-11 w-11 items-center justify-center rounded-[14px] bg-gradient-to-br from-[var(--c-accent)] to-[var(--c-accent2)] text-lg font-semibold text-white shadow-[var(--shadow-glow)]">
-          <span className="drop-shadow-sm">{brand.charAt(0)}</span>
-          <span className="pointer-events-none absolute inset-0 rounded-[14px] ring-1 ring-inset ring-white/25" />
-        </div>
+        <BrandLogo boxCls="h-11 w-11 rounded-[14px]" letterCls="text-lg" title={brand} />
         <div className="text-left leading-tight">
           <div className="text-lg font-semibold tracking-tight">{brand}</div>
           <div className="mt-0.5 text-[10px] tracking-[0.28em] text-ink2/75">个人网址导航</div>

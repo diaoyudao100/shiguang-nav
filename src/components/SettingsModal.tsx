@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 import { generateLetterIcon } from '../lib/favicon'
 import { api } from '../lib/api'
 import { Field, Modal, compactCls, inputCls } from './Modal'
+import { BrandLogo } from './BrandLogo'
 import { useToast } from './Toast'
 import { aiListModels, aiTestConnection, aiDescribeSite } from '../lib/ai'
 import type { Settings, ThemeMode } from '../types'
@@ -79,12 +80,34 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
     setIconHues(Array.from({ length: 6 }, (_, i) => Math.round((base + i * 60) % 360)))
   }
   const pickFaviconFile = (file: File) => {
-    if (file.size > 150 * 1024) {
-      toast('图标文件过大，请控制在 150KB 内')
+    if (file.size > 10 * 1024 * 1024) {
+      toast('图片不能超过 10MB')
+      return
+    }
+    // SVG 是矢量文本且体积小，直接原样使用
+    if (file.type === 'image/svg+xml' && file.size <= 1024 * 1024) {
+      const reader = new FileReader()
+      reader.onload = () => setForm((f) => ({ ...f, favicon: String(reader.result) }))
+      reader.readAsDataURL(file)
       return
     }
     const reader = new FileReader()
-    reader.onload = () => setForm((f) => ({ ...f, favicon: String(reader.result) }))
+    reader.onload = () => {
+      const img = new Image()
+      img.onload = () => {
+        // 压到 256px 内：图标最大只显示 52px，同时避免撑爆 localStorage 与云端同步体积
+        const scale = Math.min(1, 256 / Math.max(img.width, img.height, 1))
+        const w = Math.max(1, Math.round(img.width * scale))
+        const h = Math.max(1, Math.round(img.height * scale))
+        const canvas = document.createElement('canvas')
+        canvas.width = w
+        canvas.height = h
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h)
+        setForm((f) => ({ ...f, favicon: canvas.toDataURL('image/png') }))
+      }
+      img.onerror = () => toast('无法读取该图片，请换 PNG / JPG / SVG 试试')
+      img.src = String(reader.result)
+    }
     reader.readAsDataURL(file)
   }
 
@@ -281,7 +304,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
                 title="图标预览"
               >
                 {form.favicon ? (
-                  <img src={form.favicon} alt="" className="h-8 w-8 rounded-lg object-contain" />
+                  <img src={form.favicon} alt="" className="h-full w-full object-cover" />
                 ) : (
                   <span
                     className="flex h-8 w-8 items-center justify-center rounded-lg text-sm font-semibold text-white"
@@ -318,6 +341,9 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
                     }}
                   />
                 </div>
+                <p className="mt-1.5 text-[11px] leading-4 text-ink2/60">
+                  支持 10MB 内的 PNG / JPG / SVG，超过 256px 会自动压缩；建议 256×256 及以上的正方形图片，非正方形图片会自动放大铺满并裁掉超出部分，不会留空边
+                </p>
                 <div className="mt-2 rounded-xl bg-base p-3">
                   <div className="flex items-center justify-between">
                     <span className="text-[11px] text-ink2">随机生成图标</span>
@@ -791,10 +817,12 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
           {/* 关于（合并至数据页下方） */}
           <div className="mt-1 flex flex-col gap-4 border-t border-line pt-4">
             <div className="flex items-center gap-3 rounded-xl border border-line bg-base p-4">
-              <div className="relative flex h-11 w-11 items-center justify-center rounded-[13px] bg-gradient-to-br from-[var(--c-accent)] to-[var(--c-accent2)] text-lg font-semibold text-white shadow-[var(--shadow-glow)]">
-                {(form.siteTitle || '拾光导航').trim().charAt(0)}
-                <span className="pointer-events-none absolute inset-0 rounded-[13px] ring-1 ring-inset ring-white/25" />
-              </div>
+              <BrandLogo
+                boxCls="h-11 w-11 rounded-[13px]"
+                letterCls="text-lg"
+                title={form.siteTitle || '拾光导航'}
+                src={form.favicon}
+              />
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{form.siteTitle || '拾光导航'}</div>
                 <div className="mt-0.5 text-xs text-ink2">v2.1.0 · 个人网址导航</div>
