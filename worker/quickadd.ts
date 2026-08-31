@@ -23,6 +23,7 @@ interface QuickAddBody {
   title?: string
   desc?: string
   categoryId?: string
+  pinned?: boolean
 }
 
 /* ---------------- 通用小工具 ---------------- */
@@ -411,7 +412,7 @@ export async function handleQuickAdd(req: Request, env: Env): Promise<Response> 
     url,
     desc,
     categoryId,
-    pinned: false,
+    pinned: body?.pinned === true,
     hidden: false,
     iconUrl: '',
     iconColor: '',

@@ -125,6 +125,7 @@ $('saveBtn').addEventListener('click', async () => {
       title: $('name').value.trim(),
       categoryId: $('category').value || undefined,
       desc: $('desc').value.trim(),
+      pinned: $('pin').checked,
     }),
   })
   if (status === 200) {

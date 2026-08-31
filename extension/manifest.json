@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "拾光导航 · 一键收藏",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "把当前网页收藏到拾光导航：弹出确认窗，AI 推荐分类与简介，可从导航站全部分类中自选。点扩展图标或按 Alt+S。",
   "icons": {
     "16": "icons/16.png",
