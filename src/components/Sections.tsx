@@ -16,11 +16,12 @@ interface SectionsProps {
   setDrag: (d: DragState) => void
   query: string
   activeCat: string | null // null=全部，'__pinned__'=仅置顶，其他为分类 id
+  sortMode?: boolean
   onEditSite: (site: Site) => void
   onAddToCategory: (catId: string) => void
 }
 
-export function Sections({ drag, setDrag, query, activeCat, onEditSite, onAddToCategory }: SectionsProps) {
+export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite, onAddToCategory }: SectionsProps) {
   const { data, dropSite } = useStore()
   const catName = (id: string) => data.categories.find((c) => c.id === id)?.name ?? '未分类'
   const hiddenSites = data.sites.filter((s) => s.hidden)
@@ -59,6 +60,7 @@ export function Sections({ drag, setDrag, query, activeCat, onEditSite, onAddToC
       site={site}
       query={query}
       categoryChip={chip}
+      sortMode={sortMode}
       isDragging={drag.id === site.id}
       dropEdge={edgeOf(catId, site)}
       onDragStart={() => setDrag({ id: site.id, from, edge: null })}
@@ -117,6 +119,16 @@ export function Sections({ drag, setDrag, query, activeCat, onEditSite, onAddToC
 
   return (
     <>
+      {sortMode && (
+        <div className="mb-5 flex items-center gap-2 rounded-xl border border-accent/30 bg-accent/10 px-4 py-2.5 text-xs text-ink2">
+          <IconPin width={12} height={12} className="shrink-0 text-accent" />
+          <span>
+            排序模式：拖拽卡片调整顺序，也可拖到左侧分类换组；点击右上角
+            <span className="mx-1 font-medium text-accent">排序按钮</span>
+            退出
+          </span>
+        </div>
+      )}
       {showPinned && (
         <section className="mb-8">
           <div className="mb-3.5 flex items-center gap-2.5">

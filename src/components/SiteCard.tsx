@@ -53,6 +53,7 @@ interface CardProps {
   site: Site
   query?: string
   categoryChip?: string
+  sortMode?: boolean
   isDragging?: boolean
   dropEdge?: 'top' | 'bottom' | null
   onDragStart?: () => void
@@ -66,6 +67,7 @@ export function SiteCard({
   site,
   query = '',
   categoryChip,
+  sortMode,
   isDragging,
   dropEdge,
   onDragStart,
@@ -85,9 +87,11 @@ export function SiteCard({
       onDragEnd={onDragEnd}
       onDragOver={(e) => onDragOverCard?.(e, site)}
       onDrop={(e) => onDropCard?.(e, site)}
-      className={`group card relative z-0 cursor-pointer p-2.5 transition-[height] hover:z-30 ${
-        isDragging || site.hidden ? 'opacity-60' : ''
-      } ${dropEdge === 'top' ? 'drop-line-top' : ''} ${dropEdge === 'bottom' ? 'drop-line-bottom' : ''}`}
+      className={`group card relative z-0 p-2.5 transition-[height] hover:z-30 ${
+        sortMode ? 'cursor-grab border-accent/40 ring-1 ring-accent/25' : 'cursor-pointer'
+      } ${isDragging || site.hidden ? 'opacity-60' : ''} ${dropEdge === 'top' ? 'drop-line-top' : ''} ${
+        dropEdge === 'bottom' ? 'drop-line-bottom' : ''
+      }`}
     >
       <div className="flex items-center gap-2.5">
         <Favicon site={site} />
@@ -139,14 +143,17 @@ export function SiteCard({
         </button>
       </div>
 
-      <a
-        href={site.url}
-        target="_blank"
-        rel="noreferrer noopener"
-        className="absolute inset-0"
-        aria-label={`打开 ${site.name}`}
-        onClick={(e) => e.stopPropagation()}
-      />
+      {/* 排序模式下隐藏整卡跳转层，避免与拖拽冲突 */}
+      {!sortMode && (
+        <a
+          href={site.url}
+          target="_blank"
+          rel="noreferrer noopener"
+          className="absolute inset-0"
+          aria-label={`打开 ${site.name}`}
+          onClick={(e) => e.stopPropagation()}
+        />
+      )}
     </div>
   )
 }

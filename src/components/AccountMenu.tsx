@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
 import { navigate } from '../lib/router'
-import { avatarColor } from '../lib/favicon'
 import { Field, Modal, inputCls } from './Modal'
 import { useToast } from './Toast'
 
@@ -66,9 +65,7 @@ export function AccountMenu() {
         ) : (
           <span
             className="flex h-full w-full items-center justify-center text-[13px] font-semibold text-white"
-            style={{
-              background: `linear-gradient(135deg, ${avatarColor(user.name)}, color-mix(in srgb, ${avatarColor(user.name)} 62%, black))`,
-            }}
+            style={{ background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent2))' }}
           >
             {user.name.charAt(0).toUpperCase()}
           </span>
@@ -101,9 +98,7 @@ export function AccountMenu() {
           >
             修改昵称
           </MenuItem>
-          <MenuItem danger onClick={logout}>
-            退出登录
-          </MenuItem>
+          <MenuItem onClick={logout}>退出登录</MenuItem>
         </div>
       )}
 
@@ -134,18 +129,14 @@ export function AccountMenu() {
 function MenuItem({
   children,
   onClick,
-  danger,
 }: {
   children: React.ReactNode
   onClick: () => void
-  danger?: boolean
 }) {
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center gap-2 rounded-[10px] px-3 py-2 text-left text-[13px] transition-colors hover:bg-hover ${
-        danger ? 'text-danger' : 'text-ink'
-      }`}
+      className="flex w-full items-center gap-2 rounded-[10px] px-3 py-2 text-left text-[13px] text-ink transition-colors hover:bg-hover"
     >
       {children}
     </button>

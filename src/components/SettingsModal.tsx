@@ -53,6 +53,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
   const { user } = useAuth()
   const toast = useToast()
   const faviconFileRef = useRef<HTMLInputElement>(null)
+  const bgFileRef = useRef<HTMLInputElement>(null)
   const [tab, setTab] = useState<Tab>('site')
   const [form, setForm] = useState<Settings>(() => ({ ...data.settings }))
   const [iconHues, setIconHues] = useState<number[]>([220, 280, 160, 30, 0, 330])
@@ -106,6 +107,44 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
         setForm((f) => ({ ...f, favicon: canvas.toDataURL('image/png') }))
       }
       img.onerror = () => toast('无法读取该图片，请换 PNG / JPG / SVG 试试')
+      img.src = String(reader.result)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const pickBgFile = (file: File) => {
+    if (file.size > 10 * 1024 * 1024) {
+      toast('图片不能超过 10MB')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      const img = new Image()
+      img.onload = () => {
+        // 背景图压到 1920px 内的 JPEG：控制 localStorage 与云端同步体积；透明底先垫白
+        const encode = (w: number, h: number, q: number) => {
+          const canvas = document.createElement('canvas')
+          canvas.width = w
+          canvas.height = h
+          const ctx = canvas.getContext('2d')!
+          ctx.fillStyle = '#ffffff'
+          ctx.fillRect(0, 0, w, h)
+          ctx.drawImage(img, 0, 0, w, h)
+          return canvas.toDataURL('image/jpeg', q)
+        }
+        const scale = Math.min(1, 1920 / Math.max(img.width, img.height, 1))
+        let out = encode(Math.max(1, Math.round(img.width * scale)), Math.max(1, Math.round(img.height * scale)), 0.85)
+        if (out.length > 1_600_000) {
+          out = encode(
+            Math.max(1, Math.round(img.width * scale * 0.66)),
+            Math.max(1, Math.round(img.height * scale * 0.66)),
+            0.72,
+          )
+        }
+        applyBgImage(true, out)
+        toast('背景图已应用')
+      }
+      img.onerror = () => toast('无法读取该图片，请换 JPG / PNG 试试')
       img.src = String(reader.result)
     }
     reader.readAsDataURL(file)
@@ -663,7 +702,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
             <div className="flex items-center justify-between rounded-xl border border-line bg-base px-4 py-3">
               <div>
                 <div className="text-sm font-medium">启用背景图</div>
-                <div className="mt-0.5 text-xs text-ink2">支持 URL 或 data URL</div>
+                <div className="mt-0.5 text-xs text-ink2">支持本地上传（10MB 内，自动压缩）或 URL / data URL</div>
               </div>
               <button
                 type="button"
@@ -684,10 +723,29 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
               <div className="mt-2.5 flex gap-2">
                 <input
                   className={inputCls + ' min-w-0 flex-1 font-mono text-xs'}
-                  value={form.bgImage}
+                  value={form.bgImage.startsWith('data:') ? '（已使用本地上传的图片）' : form.bgImage}
                   onChange={(e) => setForm((f) => ({ ...f, bgImage: e.target.value }))}
                   onBlur={(e) => applyBgImage(true, e.target.value)}
                   placeholder="https://example.com/background.jpg"
+                  readOnly={form.bgImage.startsWith('data:')}
+                />
+                <button
+                  type="button"
+                  onClick={() => bgFileRef.current?.click()}
+                  className="h-[42px] shrink-0 rounded-lg border border-line bg-surface px-3.5 text-xs text-ink2 transition-all hover:border-line-strong hover:text-ink"
+                >
+                  上传
+                </button>
+                <input
+                  ref={bgFileRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0]
+                    if (f) pickBgFile(f)
+                    e.target.value = ''
+                  }}
                 />
                 <button
                   type="button"
@@ -806,7 +864,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
                 onClose()
               }
             }}
-            className="h-11 w-full rounded-full border border-danger/30 text-xs font-medium text-danger transition-colors hover:bg-danger/5"
+            className="h-11 w-full rounded-full border border-accent/35 text-[13px] font-medium text-accent transition-colors hover:bg-accent/10"
           >
             重置全部数据
           </button>
@@ -828,7 +886,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
                 <div className="mt-0.5 text-xs text-ink2">v2.1.0 · 个人网址导航</div>
               </div>
               <a
-                href="https://github.com"
+                href="https://github.com/diaoyudao100/shiguang-nav"
                 target="_blank"
                 rel="noreferrer noopener"
                 className="btn-ghost ms-auto shrink-0 !px-3 !py-1.5 text-xs"

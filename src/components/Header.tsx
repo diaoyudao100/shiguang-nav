@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { useTheme } from '../hooks/useTheme'
 import { useAuth } from '../hooks/useAuth'
 import { AccountMenu } from './AccountMenu'
 import { BrandLogo } from './BrandLogo'
 import { SearchBar } from './SearchBar'
-import { IconMenu, IconMonitor, IconMoon, IconPlus, IconSettings, IconSun } from './icons'
+import { IconMenu, IconMonitor, IconMoon, IconPlus, IconSettings, IconSort, IconSun } from './icons'
 
 function useClock(): string {
   const [now, setNow] = useState(() => new Date())
@@ -49,31 +49,56 @@ function SyncChip() {
 function ThemeSwitch() {
   const { mode, setMode } = useTheme()
   const { setSettings } = useStore()
+  const [open, setOpen] = useState(false)
+  const boxRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onDown = (e: MouseEvent) => {
+      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
   const opts = [
     { id: 'light', icon: IconSun, title: '浅色' },
     { id: 'dark', icon: IconMoon, title: '深色' },
     { id: 'system', icon: IconMonitor, title: '跟随系统' },
   ] as const
+  const current = opts.find((o) => o.id === mode) ?? opts[2]
+  const apply = (id: (typeof opts)[number]['id']) => {
+    setMode(id)
+    setSettings({ theme: id })
+    setOpen(false)
+  }
   return (
-    <div className="flex items-center gap-0.5 rounded-full border border-line bg-surface/60 p-1">
-      {opts.map((o) => (
-        <button
-          key={o.id}
-          title={o.title}
-          aria-label={o.title}
-          onClick={() => {
-            setMode(o.id)
-            setSettings({ theme: o.id })
-          }}
-          className={`rounded-full p-1.5 transition-all ${
-            mode === o.id
-              ? 'bg-surface text-accent shadow-sm'
-              : 'text-ink2 hover:bg-hover hover:text-ink'
-          }`}
-        >
-          <o.icon width={14} height={14} />
-        </button>
-      ))}
+    <div className="relative" ref={boxRef}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        title={`主题：${current.title}（点击切换）`}
+        aria-label="切换主题"
+        className="flex items-center justify-center rounded-full border border-line bg-surface/60 p-2 text-ink2 transition-all hover:border-line-strong hover:text-ink"
+      >
+        <current.icon width={15} height={15} />
+      </button>
+      {open && (
+        <div className="glass-panel anim-pop absolute right-0 top-10 z-50 w-32 rounded-2xl p-1.5 shadow-pop">
+          {opts.map((o) => (
+            <button
+              key={o.id}
+              onClick={() => apply(o.id)}
+              className={`flex w-full items-center gap-2 rounded-[10px] px-3 py-2 text-left text-[13px] transition-colors hover:bg-hover ${
+                mode === o.id ? 'font-medium text-accent' : 'text-ink'
+              }`}
+            >
+              <o.icon width={14} height={14} />
+              {o.title}
+              {mode === o.id && <span className="ml-auto text-[11px]">✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -82,6 +107,8 @@ interface HeaderProps {
   onAdd: () => void
   onSettings: () => void
   onToggleSidebar: () => void
+  sortMode: boolean
+  onToggleSort: () => void
   search: {
     scope: 'in' | 'out'
     setScope: (s: 'in' | 'out') => void
@@ -90,7 +117,7 @@ interface HeaderProps {
   }
 }
 
-export function Header({ onAdd, onSettings, onToggleSidebar, search }: HeaderProps) {
+export function Header({ onAdd, onSettings, onToggleSidebar, sortMode, onToggleSort, search }: HeaderProps) {
   const clock = useClock()
   const { data } = useStore()
   const brand = data.settings.siteTitle?.trim() || '拾光导航'
@@ -124,6 +151,19 @@ export function Header({ onAdd, onSettings, onToggleSidebar, search }: HeaderPro
         <div className="ml-auto flex shrink-0 items-center gap-2">
           <SyncChip />
           <ThemeSwitch />
+          <button
+            onClick={onToggleSort}
+            className={`flex items-center justify-center rounded-full border p-2 transition-all ${
+              sortMode
+                ? 'border-accent/50 bg-accent/10 text-accent'
+                : 'border-line bg-surface/60 text-ink2 hover:border-line-strong hover:text-ink'
+            }`}
+            aria-pressed={sortMode}
+            aria-label="排序模式"
+            title={sortMode ? '退出排序模式' : '排序模式：拖拽调整网址卡片顺序'}
+          >
+            <IconSort width={15} height={15} />
+          </button>
           <button
             onClick={onSettings}
             className="rounded-full border border-line bg-surface/60 p-2 text-ink2 transition-all hover:border-line-strong hover:text-ink"

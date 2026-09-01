@@ -225,3 +225,11 @@ export const IconImage = (p: P) => (
     <path d="m21 15-4.6-4.6a2 2 0 0 0-2.8 0L5 19" />
   </svg>
 )
+export const IconSort = (p: P) => (
+  <svg {...base(p)}>
+    <path d="m3 8 4-4 4 4" />
+    <path d="M7 4v16" />
+    <path d="m21 16-4 4-4-4" />
+    <path d="M17 20V4" />
+  </svg>
+)

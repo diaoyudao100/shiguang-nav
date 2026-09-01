@@ -31,6 +31,7 @@ function Shell() {
   const [activeCat, setActiveCat] = useState<string | null>(null)
   const [drag, setDrag] = useState<DragState>({ id: null, from: 'category', edge: null })
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [sortMode, setSortMode] = useState(false)
   const [linkModal, setLinkModal] = useState<LinkModalState>({ open: false, site: null, defaultCategoryId: null })
   const [catModal, setCatModal] = useState(false)
   const [dataModal, setDataModal] = useState(false)
@@ -58,6 +59,8 @@ function Shell() {
         onAdd={() => openAdd(null)}
         onSettings={() => setSettingsModal(true)}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
+        sortMode={sortMode}
+        onToggleSort={() => setSortMode((v) => !v)}
       />
       <div className="flex">
         <Sidebar
@@ -81,6 +84,7 @@ function Shell() {
               setDrag={setDrag}
               query={scope === 'in' ? query.trim() : ''}
               activeCat={activeCat}
+              sortMode={sortMode}
               onEditSite={(site) => setLinkModal({ open: true, site, defaultCategoryId: null })}
               onAddToCategory={(catId) => openAdd(catId)}
             />
