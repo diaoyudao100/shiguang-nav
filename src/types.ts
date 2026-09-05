@@ -49,6 +49,7 @@ export interface Settings {
 
 export interface Note {
   id: string
+  title: string // 单行标题（可选），空 = 无标题便签
   text: string
   pinned: boolean // 置顶便签排在最前
   updatedAt: number

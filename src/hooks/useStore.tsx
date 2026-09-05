@@ -43,6 +43,7 @@ interface StoreCtx {
   resetAll: () => void
   addNote: () => Note
   updateNote: (id: string, text: string) => void
+  updateNoteTitle: (id: string, title: string) => void
   toggleNotePin: (id: string) => void
   deleteNote: (id: string) => void
 }
@@ -411,7 +412,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       resetAll: () => mutate(() => defaultData()),
       addNote: () => {
         const now = Date.now()
-        const note: Note = { id: 'n-' + uid(), text: '', pinned: false, updatedAt: now }
+        const note: Note = { id: 'n-' + uid(), title: '', text: '', pinned: false, updatedAt: now }
         mutate((d) => {
           d.notes.push(note)
           return d
@@ -423,6 +424,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const n = d.notes.find((x) => x.id === id)
           if (n) {
             n.text = text.slice(0, 2000)
+            n.updatedAt = Date.now()
+          }
+          return d
+        }),
+      updateNoteTitle: (id, title) =>
+        mutate((d) => {
+          const n = d.notes.find((x) => x.id === id)
+          if (n) {
+            n.title = title.slice(0, 60)
             n.updatedAt = Date.now()
           }
           return d
@@ -472,6 +482,14 @@ export function backupToNavData(raw: unknown): NavData | null {
     categories: obj.categories,
     sites: obj.sites,
     settings: obj.settings ?? fallback.settings,
-    notes: Array.isArray(obj.notes) ? obj.notes : fallback.notes,
+    notes: Array.isArray(obj.notes)
+      ? obj.notes.map((x: Partial<Note>) => ({
+          id: x.id ?? 'n-' + Math.random().toString(36).slice(2),
+          title: typeof x.title === 'string' ? x.title.slice(0, 60) : '',
+          text: typeof x.text === 'string' ? x.text : '',
+          pinned: !!x.pinned,
+          updatedAt: x.updatedAt ?? Date.now(),
+        }))
+      : fallback.notes,
   }
 }

@@ -162,6 +162,7 @@ export function migrate(data: Partial<NavData>): NavData {
         .filter((n) => n && typeof n.text === 'string')
         .map((n: Partial<Note>, i: number) => ({
           id: n.id || 'n-' + i,
+          title: typeof n.title === 'string' ? n.title.slice(0, 60) : '',
           text: n.text || '',
           pinned: !!n.pinned,
           updatedAt: n.updatedAt || Date.now(),

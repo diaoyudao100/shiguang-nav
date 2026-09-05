@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import type { Note } from '../types'
 import { useStore } from '../hooks/useStore'
 import { Modal } from './Modal'
 import { IconPin, IconPlus, IconStickyNote, IconTrash } from './icons'
@@ -19,7 +20,7 @@ function fmtTime(ts: number): string {
 
 /** 便签面板：本地与云端实时同步（随数据一并保存），置顶排前、自动存稿 */
 export function NotesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { data, addNote, updateNote, toggleNotePin, deleteNote } = useStore()
+  const { data, addNote, updateNote, updateNoteTitle, toggleNotePin, deleteNote } = useStore()
   const toast = useToast()
   const confirm = useConfirm()
   const focusId = useRef<string | null>(null)
@@ -35,7 +36,8 @@ export function NotesModal({ open, onClose }: { open: boolean; onClose: () => vo
     bodyRef.current?.scrollTo({ top: 0 })
   }
 
-  const remove = async (id: string, preview: string) => {
+  const remove = async (note: Note) => {
+    const preview = note.title.trim() || note.text
     const ok = await confirm({
       danger: true,
       title: '删除便签',
@@ -53,7 +55,7 @@ export function NotesModal({ open, onClose }: { open: boolean; onClose: () => vo
       okText: '删除',
     })
     if (!ok) return
-    deleteNote(id)
+    deleteNote(note.id)
     toast('便签已删除')
   }
 
@@ -95,7 +97,9 @@ export function NotesModal({ open, onClose }: { open: boolean; onClose: () => vo
                   n.pinned ? 'border-accent/30 bg-accent-soft/30' : 'border-line'
                 }`}
               >
-                <textarea
+                {/* 标题：卡片左上角 */}
+                <input
+                  id={`note-title-${n.id}`}
                   ref={(el) => {
                     if (el && focusId.current === n.id) {
                       focusId.current = null
@@ -104,12 +108,26 @@ export function NotesModal({ open, onClose }: { open: boolean; onClose: () => vo
                       el.setSelectionRange(end, end)
                     }
                   }}
+                  maxLength={60}
+                  value={n.title}
+                  onChange={(e) => updateNoteTitle(n.id, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      document.getElementById(`note-body-${n.id}`)?.focus()
+                    }
+                  }}
+                  placeholder="便签标题（可选）"
+                  className="w-full truncate border-b border-transparent bg-transparent pb-1 text-[13px] font-semibold text-ink outline-none transition-colors placeholder:font-normal placeholder:text-ink2/40 focus:border-line-strong"
+                />
+                <textarea
+                  id={`note-body-${n.id}`}
                   rows={rows}
                   maxLength={MAX_LEN}
                   value={n.text}
                   onChange={(e) => updateNote(n.id, e.target.value)}
                   placeholder="写点什么…（自动保存）"
-                  className="w-full resize-none bg-transparent text-[13px] leading-6 text-ink outline-none placeholder:text-ink2/45"
+                  className="mt-1 w-full resize-none bg-transparent text-[13px] leading-6 text-ink outline-none placeholder:text-ink2/45"
                 />
                 <div className="mt-2 flex items-center gap-1.5">
                   <span className="text-[10px] tabular-nums text-ink2/60">
@@ -132,7 +150,7 @@ export function NotesModal({ open, onClose }: { open: boolean; onClose: () => vo
                     </button>
                     <button
                       type="button"
-                      onClick={() => remove(n.id, n.text)}
+                      onClick={() => remove(n)}
                       className="rounded-md p-1 text-ink2/70 transition-colors hover:bg-hover hover:text-danger"
                       title="删除便签"
                     >
