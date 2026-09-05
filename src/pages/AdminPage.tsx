@@ -4,7 +4,6 @@ import { useAuth } from '../hooks/useAuth'
 import { navigate } from '../lib/router'
 import { useToast } from '../components/Toast'
 import { useConfirm } from '../components/Confirm'
-import { avatarColor } from '../lib/favicon'
 import { btnGhost, btnPrimary, inputCls } from '../components/Modal'
 import { IconArrowUp, IconCopy, IconPlus, IconTrash } from '../components/icons'
 
@@ -246,7 +245,7 @@ export function AdminPage() {
             <div key={u.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-line py-3 first:border-t-0">
               <div
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
-                style={{ background: `linear-gradient(135deg, ${avatarColor(u.name)}, color-mix(in srgb, ${avatarColor(u.name)} 62%, black))` }}
+                style={{ background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent2))' }}
               >
                 {u.name.charAt(0).toUpperCase()}
               </div>
