@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { IconX } from './icons'
 import { useStore } from '../hooks/useStore'
 
@@ -37,7 +38,8 @@ export function Modal({
   }, [open, onClose, closeOnEsc])
 
   if (!open) return null
-  return (
+  // Portal 到 body：毛玻璃/变形等祖先会劫持 fixed 定位（包含块规则），挂 body 上保证屏幕居中
+  return createPortal(
     <div
       className="anim-fade fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm"
       onMouseDown={(e) => {
@@ -70,7 +72,8 @@ export function Modal({
         {/* min-h-0：flex 子项默认 min-height 为内容高度，缺了它内容超高时不会滚动而是被硬裁 */}
         <div className="min-h-0 overflow-y-auto px-5 py-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 

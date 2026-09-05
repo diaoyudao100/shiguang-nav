@@ -4,7 +4,6 @@ import { useAuth } from '../hooks/useAuth'
 import { useStore } from '../hooks/useStore'
 import { navigate } from '../lib/router'
 import { Field, Modal, inputCls } from './Modal'
-import { IconStickyNote } from './icons'
 import { NotesModal } from './NotesModal'
 import { useToast } from './Toast'
 
@@ -109,7 +108,6 @@ export function AccountMenu() {
             }}
             count={(data.notes ?? []).length}
           >
-            <IconStickyNote width={14} height={14} />
             便签
           </MenuItem>
           <MenuItem
