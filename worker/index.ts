@@ -63,8 +63,8 @@ export default {
       if (path === '/api/data' && method === 'PUT') return await handlePutData(req, env)
 
       // AI 代理（同源 POST，仅转发到 https 的提供商接口）
-      if (path === '/api/ai/chat' && method === 'POST') return await handleAiChat(req)
-      if (path === '/api/ai/models' && method === 'POST') return await handleAiModels(req)
+      if (path === '/api/ai/chat' && method === 'POST') return await handleAiChat(req, env)
+      if (path === '/api/ai/models' && method === 'POST') return await handleAiModels(req, env)
 
       // 浏览器扩展：一键收藏（Bearer 连接码或会话认证）
       if (path === '/api/device-token' && method === 'POST') return await handleDeviceToken(req, env)

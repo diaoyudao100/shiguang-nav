@@ -89,7 +89,7 @@ export function publicUserCount(env: Env): Promise<number> {
 /* ---------------- 邮箱注册 / 登录 ---------------- */
 
 export async function handleRegister(req: Request, env: Env): Promise<Response> {
-  if (!sameOrigin(req)) return fail('非法来源', 403)
+  if (!sameOrigin(req, env)) return fail('非法来源', 403)
   const body = await readJson<{ email?: string; password?: string; name?: string; inviteCode?: string }>(req)
   const email = body?.email?.trim().toLowerCase() ?? ''
   const password = body?.password ?? ''
@@ -143,7 +143,7 @@ export async function handleRegister(req: Request, env: Env): Promise<Response> 
 }
 
 export async function handleLogin(req: Request, env: Env): Promise<Response> {
-  if (!sameOrigin(req)) return fail('非法来源', 403)
+  if (!sameOrigin(req, env)) return fail('非法来源', 403)
   const body = await readJson<{ email?: string; password?: string }>(req)
   const email = body?.email?.trim().toLowerCase() ?? ''
   const password = body?.password ?? ''
@@ -171,7 +171,7 @@ export async function handleMe(req: Request, env: Env): Promise<Response> {
 }
 
 export async function handleUpdateName(req: Request, env: Env): Promise<Response> {
-  if (!sameOrigin(req)) return fail('非法来源', 403)
+  if (!sameOrigin(req, env)) return fail('非法来源', 403)
   const user = await requireUser(req, env)
   if (user instanceof Response) return user
   const body = await readJson<{ name?: string }>(req)
@@ -264,7 +264,7 @@ export async function handleOAuthCallback(req: Request, env: Env, provider: stri
 }
 
 export async function handleOAuthComplete(req: Request, env: Env): Promise<Response> {
-  if (!sameOrigin(req)) return fail('非法来源', 403)
+  if (!sameOrigin(req, env)) return fail('非法来源', 403)
   const body = await readJson<{ token?: string; inviteCode?: string }>(req)
   const payload = body?.token ? await jwtVerify<{ reg: Identity; r: string }>(body.token, secret(env)) : null
   if (!payload?.reg) return fail('注册令牌无效或已过期，请重新登录', 400)

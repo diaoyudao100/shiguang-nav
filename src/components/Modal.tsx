@@ -10,6 +10,8 @@ interface ModalProps {
   children: ReactNode
   width?: string
   headerExtra?: ReactNode
+  /** 标题左侧的自定义图标（不传用主题色光点） */
+  icon?: ReactNode
   /** 弹窗之上还会叠一层选择器时，关掉本层的 Esc 关闭，让 Esc 只关最上层 */
   closeOnEsc?: boolean
 }
@@ -21,6 +23,7 @@ export function Modal({
   children,
   width = 'max-w-lg',
   headerExtra,
+  icon,
   closeOnEsc = true,
 }: ModalProps) {
   const { data } = useStore()
@@ -53,10 +56,12 @@ export function Modal({
       >
         <div className="flex items-center justify-between px-5 pb-3.5 pt-4">
           <div className="flex min-w-0 items-center gap-2.5">
-            <span
-              aria-hidden
-              className="h-2 w-2 shrink-0 rounded-full bg-gradient-to-br from-[var(--c-accent)] to-[var(--c-accent2)] shadow-[0_0_8px_color-mix(in_srgb,var(--c-accent)_60%,transparent)]"
-            />
+            {icon ?? (
+              <span
+                aria-hidden
+                className="h-2 w-2 shrink-0 rounded-full bg-gradient-to-br from-[var(--c-accent)] to-[var(--c-accent2)] shadow-[0_0_8px_color-mix(in_srgb,var(--c-accent)_60%,transparent)]"
+              />
+            )}
             <h2 className="text-base font-semibold tracking-tight">{title}</h2>
             {headerExtra}
           </div>

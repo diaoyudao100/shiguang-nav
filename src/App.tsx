@@ -127,7 +127,7 @@ function Shell() {
               </a>
             </div>
             <p className="mt-4 text-center text-[11px] tracking-wide text-ink2/50">
-              {data.settings.siteTitle?.trim() || '拾光导航'} · v2.3.1 · 本地优先，数据尽在掌控
+              {data.settings.siteTitle?.trim() || '拾光导航'} · v2.3.2 · 本地优先，数据尽在掌控
             </p>
           </footer>
         </main>

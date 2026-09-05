@@ -22,7 +22,7 @@ export async function handleGetData(req: Request, env: Env): Promise<Response> {
 export async function handlePutData(req: Request, env: Env): Promise<Response> {
   const user = await requireUser(req, env)
   if (user instanceof Response) return user
-  if (!sameOrigin(req)) return fail('非法来源', 403)
+  if (!sameOrigin(req, env)) return fail('非法来源', 403)
   const body = await readJson<{ data?: NavData }>(req)
   if (!body?.data || !Array.isArray(body.data.categories) || !Array.isArray(body.data.sites)) {
     return fail('数据格式不正确')

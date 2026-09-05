@@ -47,7 +47,7 @@ export async function handleAdminOverview(req: Request, env: Env): Promise<Respo
 export async function handleCreateInvite(req: Request, env: Env): Promise<Response> {
   const admin = await requireAdmin(req, env)
   if (admin instanceof Response) return admin
-  if (!sameOrigin(req)) return fail('非法来源', 403)
+  if (!sameOrigin(req, env)) return fail('非法来源', 403)
   const body = await readJson<{ maxUses?: number; expiresInDays?: number | null }>(req)
   const maxUses = Math.min(Math.max(Number(body?.maxUses) || 1, 1), 100)
   const days = body?.expiresInDays ?? null
@@ -64,7 +64,7 @@ export async function handleCreateInvite(req: Request, env: Env): Promise<Respon
 export async function handleDeleteInvite(req: Request, env: Env, code: string): Promise<Response> {
   const admin = await requireAdmin(req, env)
   if (admin instanceof Response) return admin
-  if (!sameOrigin(req)) return fail('非法来源', 403)
+  if (!sameOrigin(req, env)) return fail('非法来源', 403)
   await env.DB.prepare('DELETE FROM invite_codes WHERE code = ?').bind(code).run()
   return json({ ok: true })
 }
@@ -72,7 +72,7 @@ export async function handleDeleteInvite(req: Request, env: Env, code: string): 
 export async function handlePatchUser(req: Request, env: Env, targetId: string): Promise<Response> {
   const admin = await requireAdmin(req, env)
   if (admin instanceof Response) return admin
-  if (!sameOrigin(req)) return fail('非法来源', 403)
+  if (!sameOrigin(req, env)) return fail('非法来源', 403)
   const body = await readJson<{ status?: 'active' | 'disabled'; role?: 'admin' | 'user' }>(req)
   const target = await env.DB.prepare('SELECT * FROM users WHERE id = ?').bind(targetId).first()
   if (!target) return fail('用户不存在', 404)
@@ -92,7 +92,7 @@ export async function handlePatchUser(req: Request, env: Env, targetId: string):
 export async function handleResetPassword(req: Request, env: Env, targetId: string): Promise<Response> {
   const admin = await requireAdmin(req, env)
   if (admin instanceof Response) return admin
-  if (!sameOrigin(req)) return fail('非法来源', 403)
+  if (!sameOrigin(req, env)) return fail('非法来源', 403)
   const body = await readJson<{ password?: string }>(req)
   const password = body?.password ?? ''
   if (password.length < 8) return fail('密码至少 8 位')

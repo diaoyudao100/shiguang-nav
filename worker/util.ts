@@ -5,6 +5,8 @@ export interface Env {
   DB: D1Database
   ASSETS: Fetcher
   JWT_SECRET?: string
+  /** 本地开发信任来源：vite(5173) 代理到 wrangler(8787) 时 Origin 与 Host 不一致，配此变量放行 */
+  DEV_ORIGIN?: string
   GOOGLE_CLIENT_ID?: string
   GOOGLE_CLIENT_SECRET?: string
   LINUXDO_CLIENT_ID?: string
@@ -68,11 +70,14 @@ export function toAuthUser(u: UserRow): AuthUser {
 }
 
 /** 简单同源校验：变更类请求要求 Origin 与站点一致（配合 SameSite=Lax 防 CSRF） */
-export function sameOrigin(req: Request): boolean {
+export function sameOrigin(req: Request, env?: Env): boolean {
   const origin = req.headers.get('Origin')
   if (!origin) return true // 同源 fetch 一般不带 Origin 的场景（curl 等）放行，内部工具可接受
   try {
-    return new URL(origin).origin === new URL(req.url).origin
+    const o = new URL(origin).origin
+    // 本地开发：vite(5173) 经代理转发到 wrangler(8787)，Origin 与 Host 端口不同，用 DEV_ORIGIN 显式信任
+    if (env?.DEV_ORIGIN && o === env.DEV_ORIGIN.trim()) return true
+    return o === new URL(req.url).origin
   } catch {
     return false
   }

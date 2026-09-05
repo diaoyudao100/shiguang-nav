@@ -891,7 +891,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
               />
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{form.siteTitle || '拾光导航'}</div>
-                <div className="mt-0.5 text-xs text-ink2">v2.3.1 · 个人网址导航</div>
+                <div className="mt-0.5 text-xs text-ink2">v2.3.2 · 个人网址导航</div>
               </div>
               <a
                 href="https://github.com/diaoyudao100/shiguang-nav"

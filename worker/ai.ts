@@ -4,7 +4,7 @@
  *  自动拉取 /models 列表、挑选一个轻量对话模型重试一次，并在响应中回传实际使用的模型，
  *  前端据此持久化，后续请求直接用正确模型。
  */
-import { fail, json, readJson, sameOrigin } from './util'
+import { fail, json, readJson, sameOrigin, type Env } from './util'
 
 const TIMEOUT_MS = 30_000
 
@@ -220,9 +220,9 @@ export async function chatWithHeal(
 }
 
 /** POST /api/ai/chat：转发对话请求，返回 { text, model? }（model 仅在自动纠正时回传） */
-export async function handleAiChat(req: Request): Promise<Response> {
+export async function handleAiChat(req: Request, env: Env): Promise<Response> {
   if (req.method !== 'POST') return fail('方法不允许', 405)
-  if (!sameOrigin(req)) return fail('来源校验失败', 403)
+  if (!sameOrigin(req, env)) return fail('来源校验失败', 403)
   const body = await readJson<AiChatBody>(req, 64_000)
   if (!body?.apiKey?.trim() || !body.prompt) return fail('缺少 API KEY 或提问内容')
   const provider = body.provider === 'gemini' ? 'gemini' : 'openai'
@@ -240,9 +240,9 @@ export async function handleAiChat(req: Request): Promise<Response> {
 }
 
 /** POST /api/ai/models：拉取提供商模型列表，返回 { models } */
-export async function handleAiModels(req: Request): Promise<Response> {
+export async function handleAiModels(req: Request, env: Env): Promise<Response> {
   if (req.method !== 'POST') return fail('方法不允许', 405)
-  if (!sameOrigin(req)) return fail('来源校验失败', 403)
+  if (!sameOrigin(req, env)) return fail('来源校验失败', 403)
   const body = await readJson<AiModelsBody>(req, 16_000)
   if (!body?.apiKey?.trim()) return fail('缺少 API KEY')
   const provider = body.provider === 'gemini' ? 'gemini' : 'openai'
