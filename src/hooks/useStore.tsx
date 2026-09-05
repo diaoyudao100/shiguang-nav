@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { Category, NavData, Settings, Site } from '../types'
+import type { Category, NavData, Note, Settings, Site } from '../types'
 import { defaultData, loadData, migrate, saveData, STORAGE_KEY } from '../lib/storage'
 import { uid } from '../lib/id'
 import { normalizeUrl } from '../lib/favicon'
@@ -41,6 +41,10 @@ interface StoreCtx {
   replaceAll: (data: NavData) => void
   mergeImport: (categories: Category[], sites: Site[]) => void
   resetAll: () => void
+  addNote: () => Note
+  updateNote: (id: string, text: string) => void
+  toggleNotePin: (id: string) => void
+  deleteNote: (id: string) => void
 }
 
 const Ctx = createContext<StoreCtx | null>(null)
@@ -405,6 +409,35 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           return d
         }),
       resetAll: () => mutate(() => defaultData()),
+      addNote: () => {
+        const now = Date.now()
+        const note: Note = { id: 'n-' + uid(), text: '', pinned: false, updatedAt: now }
+        mutate((d) => {
+          d.notes.push(note)
+          return d
+        })
+        return note
+      },
+      updateNote: (id, text) =>
+        mutate((d) => {
+          const n = d.notes.find((x) => x.id === id)
+          if (n) {
+            n.text = text.slice(0, 2000)
+            n.updatedAt = Date.now()
+          }
+          return d
+        }),
+      toggleNotePin: (id) =>
+        mutate((d) => {
+          const n = d.notes.find((x) => x.id === id)
+          if (n) n.pinned = !n.pinned
+          return d
+        }),
+      deleteNote: (id) =>
+        mutate((d) => {
+          d.notes = d.notes.filter((x) => x.id !== id)
+          return d
+        }),
     }
   }, [data, sync, mutate])
 
@@ -433,5 +466,12 @@ export function backupToNavData(raw: unknown): NavData | null {
   if (!raw || typeof raw !== 'object') return null
   const obj = raw as Partial<NavData> & { app?: string }
   if (!Array.isArray(obj.categories) || !Array.isArray(obj.sites)) return null
-  return { version: 1, categories: obj.categories, sites: obj.sites, settings: obj.settings ?? defaultData().settings }
+  const fallback = defaultData()
+  return {
+    version: 1,
+    categories: obj.categories,
+    sites: obj.sites,
+    settings: obj.settings ?? fallback.settings,
+    notes: Array.isArray(obj.notes) ? obj.notes : fallback.notes,
+  }
 }

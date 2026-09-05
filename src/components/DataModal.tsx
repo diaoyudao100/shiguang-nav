@@ -34,6 +34,7 @@ export function DataModal({ open, onClose }: { open: boolean; onClose: () => voi
       exportedAt: new Date().toISOString(),
       categories: data.categories,
       sites: data.sites,
+      notes: data.notes,
     }
     downloadFile(`nav-backup-${dateTag}.json`, JSON.stringify(backup, null, 2), 'application/json')
     toast('JSON 备份已导出')
@@ -57,6 +58,7 @@ export function DataModal({ open, onClose }: { open: boolean; onClose: () => voi
         version: 1,
         categories: result.categories,
         sites: result.sites,
+        notes: data.notes,
         settings: data.settings,
       }
       replaceAll(next)

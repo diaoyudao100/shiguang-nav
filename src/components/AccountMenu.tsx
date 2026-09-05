@@ -4,6 +4,8 @@ import { useAuth } from '../hooks/useAuth'
 import { useStore } from '../hooks/useStore'
 import { navigate } from '../lib/router'
 import { Field, Modal, inputCls } from './Modal'
+import { IconStickyNote } from './icons'
+import { NotesModal } from './NotesModal'
 import { useToast } from './Toast'
 
 export function AccountMenu() {
@@ -12,6 +14,7 @@ export function AccountMenu() {
   const toast = useToast()
   const [open, setOpen] = useState(false)
   const [nameModal, setNameModal] = useState(false)
+  const [notesOpen, setNotesOpen] = useState(false)
   const [name, setName] = useState('')
   const ref = useRef<HTMLDivElement>(null)
 
@@ -101,6 +104,16 @@ export function AccountMenu() {
           )}
           <MenuItem
             onClick={() => {
+              setOpen(false)
+              setNotesOpen(true)
+            }}
+            count={(data.notes ?? []).length}
+          >
+            <IconStickyNote width={14} height={14} />
+            便签
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
               setName(user.name)
               setOpen(false)
               setNameModal(true)
@@ -132,6 +145,8 @@ export function AccountMenu() {
           </div>
         </form>
       </Modal>
+
+      <NotesModal open={notesOpen} onClose={() => setNotesOpen(false)} />
     </div>
   )
 }
@@ -139,9 +154,11 @@ export function AccountMenu() {
 function MenuItem({
   children,
   onClick,
+  count,
 }: {
   children: React.ReactNode
   onClick: () => void
+  count?: number
 }) {
   return (
     <button
@@ -149,6 +166,11 @@ function MenuItem({
       className="flex w-full items-center gap-2 rounded-[10px] px-3 py-2 text-left text-[13px] text-ink transition-colors hover:bg-hover"
     >
       {children}
+      {typeof count === 'number' && count > 0 && (
+        <span className="ml-auto rounded-full bg-hover px-2 text-[11px] leading-[18px] tabular-nums text-ink2">
+          {count}
+        </span>
+      )}
     </button>
   )
 }

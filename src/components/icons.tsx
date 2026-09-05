@@ -233,3 +233,9 @@ export const IconSort = (p: P) => (
     <path d="M17 20V4" />
   </svg>
 )
+export const IconStickyNote = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11l5-5V5a2 2 0 0 0-2-2z" />
+    <path d="M14 3v4a2 2 0 0 0 2 2h4" />
+  </svg>
+)

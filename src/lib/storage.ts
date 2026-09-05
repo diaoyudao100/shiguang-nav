@@ -1,4 +1,4 @@
-import type { Category, NavData, Settings, Site, ThemeMode } from '../types'
+import type { Category, NavData, Note, Settings, Site, ThemeMode } from '../types'
 
 /**
  * 存储键升级为 v2：与旧版标签页（仍在读写 v1 的旧代码）完全隔离，
@@ -89,6 +89,7 @@ export function defaultData(): NavData {
     version: 1,
     categories: SEED_CATEGORIES,
     sites: seedSites(),
+    notes: [],
     settings: { ...DEFAULT_SETTINGS },
   }
 }
@@ -156,5 +157,15 @@ export function migrate(data: Partial<NavData>): NavData {
   settings.theme = (['light', 'dark', 'system'] as ThemeMode[]).includes(settings.theme)
     ? settings.theme
     : 'system'
-  return { version: 1, categories, sites, settings }
+  const notes: Note[] = Array.isArray(data.notes)
+    ? data.notes
+        .filter((n) => n && typeof n.text === 'string')
+        .map((n: Partial<Note>, i: number) => ({
+          id: n.id || 'n-' + i,
+          text: n.text || '',
+          pinned: !!n.pinned,
+          updatedAt: n.updatedAt || Date.now(),
+        }))
+    : []
+  return { version: 1, categories, sites, settings, notes }
 }

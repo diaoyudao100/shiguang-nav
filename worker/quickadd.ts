@@ -166,6 +166,7 @@ function freshData(): NavData {
     version: 1,
     categories: [{ id: 'c-default', name: '默认', icon: 'folder' }],
     sites: [],
+    notes: [],
     settings: defaultSettings(),
   }
 }

@@ -47,10 +47,18 @@ export interface Settings {
   aiModel: string
 }
 
+export interface Note {
+  id: string
+  text: string
+  pinned: boolean // 置顶便签排在最前
+  updatedAt: number
+}
+
 export interface NavData {
   version: number
   categories: Category[]
   sites: Site[]
+  notes: Note[]
   settings: Settings
 }
 
