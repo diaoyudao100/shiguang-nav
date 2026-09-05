@@ -3,7 +3,7 @@ import type { Category, Site } from '../types'
 import { useStore } from '../hooks/useStore'
 import { SiteCard } from './SiteCard'
 import { categoryIcon } from '../lib/categoryIcons'
-import { IconEyeOff, IconPin, IconPlus } from './icons'
+import { IconEyeOff, IconPin, IconPlus, IconSearch } from './icons'
 
 export interface DragState {
   id: string | null
@@ -93,21 +93,18 @@ export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite
         (s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q) || s.url.toLowerCase().includes(q)),
     )
     return (
-      <section>
-        <div className="mb-3 flex items-baseline gap-2">
-          <h2 className="text-[15px] tracking-wide">
-            搜索结果 <span className="tabular-nums text-ink2">({hits.length})</span>
-          </h2>
-          <span className="text-[13px] text-ink2/80">匹配「{query}」的站点</span>
-        </div>
+      <PanelSection header={<SectionHeader icon={<IconSearch width={14} height={14} />} label="搜索结果" count={hits.length} />}>
         {hits.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-line-strong/60 py-16 text-center text-sm text-ink2">
-            没有找到匹配的站点，试试切换到「站外」用搜索引擎查找
+          <div className="flex flex-col items-center rounded-2xl border border-dashed border-line-strong/60 px-6 py-14 text-center">
+            <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-accent">
+              <IconSearch width={20} height={20} />
+            </span>
+            <p className="text-sm text-ink2">没有找到匹配的站点，试试切换到「站外」用搜索引擎查找</p>
           </div>
         ) : (
           <div className={gridCls}>{hits.map((s) => renderCard(s, s.categoryId, 'category', catName(s.categoryId)))}</div>
         )}
-      </section>
+      </PanelSection>
     )
   }
 
@@ -130,84 +127,136 @@ export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite
         </div>
       )}
       {showPinned && (
-        <section className="mb-8">
-          <div className="mb-3.5 flex items-center gap-2.5">
-            <span className="flex h-6 w-6 items-center justify-center rounded-md border border-line bg-surface text-accent shadow-sm">
-              <IconPin width={12} height={12} />
-            </span>
-            <h2 className="text-[15px] tracking-wide">置顶 / 常用</h2>
-            <span className="rounded-full bg-hover px-1.5 py-px text-[11px] font-normal tabular-nums text-ink2">
-              {pinned.length}
-            </span>
-          </div>
+        <PanelSection
+          header={
+            <SectionHeader
+              icon={<IconPin width={13} height={13} />}
+              label="置顶 / 常用"
+              count={pinned.length}
+              tint
+            />
+          }
+        >
           <div className={gridCls}>{pinned.map((s) => renderCard(s, s.categoryId, 'pinned'))}</div>
-        </section>
+        </PanelSection>
       )}
 
       {activeCat === '__pinned__' && pinned.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-line-strong/60 py-16 text-center text-sm text-ink2">
-          还没有置顶的网站，把鼠标移到卡片上点击 📌 即可置顶
+        <div className="flex flex-col items-center rounded-2xl border border-dashed border-line-strong/60 px-6 py-14 text-center">
+          <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-accent">
+            <IconPin width={19} height={19} />
+          </span>
+          <p className="text-sm text-ink2">还没有置顶的网站，把鼠标移到卡片上点击 📌 即可置顶</p>
         </div>
       )}
 
       {visibleCats.map((cat: Category) => {
         const items = data.sites.filter((s) => s.categoryId === cat.id && !s.hidden)
+        const CatIcon = categoryIcon(cat.icon)
         if (drag.id && items.length === 0) {
           // 拖拽中显示空分类的投放区
           return (
-            <section key={cat.id} className="mb-7">
-              <SectionHeader cat={cat} count={0} onAdd={() => onAddToCategory(cat.id)} />
+            <PanelSection
+              key={cat.id}
+              header={
+                <SectionHeader
+                  icon={<CatIcon width={14} height={14} />}
+                  label={cat.name}
+                  count={0}
+                  onAdd={() => onAddToCategory(cat.id)}
+                />
+              }
+            >
               {renderDropZone(cat.id)}
-            </section>
+            </PanelSection>
           )
         }
         return (
-          <section key={cat.id} className="mb-7">
-            <SectionHeader cat={cat} count={items.length} onAdd={() => onAddToCategory(cat.id)} />
+          <PanelSection
+            key={cat.id}
+            header={
+              <SectionHeader
+                icon={<CatIcon width={14} height={14} />}
+                label={cat.name}
+                count={items.length}
+                onAdd={() => onAddToCategory(cat.id)}
+              />
+            }
+          >
             {items.length === 0 ? (
               renderDropZone(cat.id)
             ) : (
               <div className={gridCls}>{items.map((s) => renderCard(s, cat.id, 'category'))}</div>
             )}
-          </section>
+          </PanelSection>
         )
       })}
       {showHidden && (
-        <section className="mb-7">
-          <div className="mb-3.5 flex items-center gap-2.5">
-            <span className="flex h-6 w-6 items-center justify-center rounded-md border border-line bg-surface text-ink2 shadow-sm">
-              <IconEyeOff width={12} height={12} />
-            </span>
-            <h2 className="text-[15px] tracking-wide text-ink2">已隐藏</h2>
-            <span className="rounded-full bg-hover px-1.5 py-px text-[11px] font-normal tabular-nums text-ink2">
-              {hiddenSites.length}
-            </span>
-          </div>
+        <PanelSection
+          header={
+            <SectionHeader
+              icon={<IconEyeOff width={13} height={13} />}
+              label="已隐藏"
+              count={hiddenSites.length}
+            />
+          }
+        >
           <div className={gridCls}>{hiddenSites.map((s) => renderCard(s, s.categoryId, 'category'))}</div>
-        </section>
+        </PanelSection>
       )}
     </>
   )
 }
 
-function SectionHeader({ cat, count, onAdd }: { cat: Category; count: number; onAdd: () => void }) {
-  const CatIcon = categoryIcon(cat.icon)
+/** 分区面板：整组卡片放进毛玻璃容器，形成清晰的分组层次 */
+function PanelSection({ header, children }: { header: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="mb-3.5 flex items-center gap-2.5">
-      <span className="flex h-6 w-6 items-center justify-center rounded-md border border-line bg-surface text-ink2 shadow-sm">
-        <CatIcon width={12} height={12} />
-      </span>
-      <h2 className="text-[15px] tracking-wide">{cat.name}</h2>
-      <span className="rounded-full bg-hover px-1.5 py-px text-[11px] font-normal tabular-nums text-ink2">
-        {count}
-      </span>
-      <button
-        onClick={onAdd}
-        title={`添加到「${cat.name}」`}
-        className="ml-auto rounded-full p-1.5 text-ink2/70 transition-all hover:bg-hover hover:text-accent"
+    <section className="mb-6">
+      <div className="panel-section p-4 sm:p-5">
+        <div className="mb-4 flex items-center gap-2.5">{header}</div>
+        {children}
+      </div>
+    </section>
+  )
+}
+
+function SectionHeader({
+  icon,
+  label,
+  count,
+  onAdd,
+  tint,
+}: {
+  icon: React.ReactNode
+  label: string
+  count?: number
+  onAdd?: () => void
+  tint?: boolean
+}) {
+  return (
+    <>
+      <span
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] border border-line bg-surface shadow-sm ${
+          tint ? 'text-accent' : 'text-ink2'
+        }`}
       >
-        <IconPlus width={14} height={14} />
-      </button>
-    </div>
+        {icon}
+      </span>
+      <h2 className="text-[15px] font-semibold tracking-wide">{label}</h2>
+      {typeof count === 'number' && (
+        <span className="rounded-full bg-hover px-2 py-0.5 text-[11px] font-normal tabular-nums text-ink2">
+          {count}
+        </span>
+      )}
+      {onAdd && (
+        <button
+          onClick={onAdd}
+          title="添加到该分类"
+          className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-ink2/70 transition-all hover:bg-hover hover:text-accent"
+        >
+          <IconPlus width={14} height={14} />
+        </button>
+      )}
+    </>
   )
 }

@@ -4,6 +4,7 @@ import App from './App'
 import { StoreProvider } from './hooks/useStore'
 import { AuthProvider } from './hooks/useAuth'
 import { ToastProvider } from './components/Toast'
+import { ConfirmProvider } from './components/Confirm'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -11,7 +12,9 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <AuthProvider>
       <StoreProvider>
         <ToastProvider>
-          <App />
+          <ConfirmProvider>
+            <App />
+          </ConfirmProvider>
         </ToastProvider>
       </StoreProvider>
     </AuthProvider>

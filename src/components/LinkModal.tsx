@@ -6,6 +6,7 @@ import { faviconUrl, hostOf, isLikelyUrl, normalizeUrl } from '../lib/favicon'
 import { Field, Modal, compactCls, inputCls } from './Modal'
 import { IconEyeOff, IconImage, IconPin, IconSparkles, IconTrash, IconUpload } from './icons'
 import { useToast } from './Toast'
+import { useConfirm } from './Confirm'
 
 interface LinkModalProps {
   open: boolean
@@ -53,6 +54,7 @@ function PillToggle({
 export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, onClose }: LinkModalProps) {
   const { data, addSite, updateSite, deleteSite } = useStore()
   const toast = useToast()
+  const confirm = useConfirm()
   const [form, setForm] = useState({
     name: '',
     url: '',
@@ -149,9 +151,21 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
     onClose()
   }
 
-  const remove = () => {
+  const remove = async () => {
     if (!site) return
-    if (!window.confirm(`确定删除「${form.name || site.name}」吗？`)) return
+    const ok = await confirm({
+      danger: true,
+      title: '删除链接',
+      message: (
+        <>
+          确定删除「<span className="font-medium text-ink">{form.name || site.name}</span>」吗？
+          <br />
+          此操作不可撤销。
+        </>
+      ),
+      okText: '删除',
+    })
+    if (!ok) return
     deleteSite(site.id)
     toast('已删除')
     onClose()
@@ -274,49 +288,51 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
           save()
         }}
       >
-        {/* 置顶 / 隐藏 / 删除 / 分类（编辑模式下收纳卡片的全部操作） */}
-        <div className="flex items-center gap-2">
-          <PillToggle
-            active={form.pinned}
-            onClick={() => set({ pinned: !form.pinned, hidden: form.pinned ? form.hidden : false })}
-            icon={<IconPin width={13} height={13} />}
-            label={form.pinned ? '已置顶' : '置顶'}
-          />
-          <PillToggle
-            active={form.hidden}
-            onClick={() => set({ hidden: !form.hidden, pinned: form.hidden ? form.pinned : false })}
-            icon={<IconEyeOff width={13} height={13} />}
-            label={form.hidden ? '已隐藏' : '隐藏'}
-          />
-          {isEdit && (
-            <button
-              type="button"
-              onClick={remove}
-              className="flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-3 text-xs font-medium text-ink2 transition-all hover:border-danger/40 hover:text-danger"
-            >
-              <IconTrash width={13} height={13} />
-              删除
-            </button>
-          )}
-          <select
-            className={compactCls + ' ms-auto h-9 w-28 text-xs leading-[34px]'}
-            value={form.categoryId}
-            onChange={(e) => set({ categoryId: e.target.value })}
-            aria-label="分类"
-          >
-            {form.categoryId && !data.categories.some((c) => c.id === form.categoryId) && (
-              <option value={form.categoryId}>{form.categoryId}</option>
+        {/* 操作组卡：置顶 / 隐藏 / 删除 / 分类 */}
+        <div className="rounded-2xl border border-line bg-base/40 p-2">
+          <div className="flex items-center gap-2">
+            <PillToggle
+              active={form.pinned}
+              onClick={() => set({ pinned: !form.pinned, hidden: form.pinned ? form.hidden : false })}
+              icon={<IconPin width={13} height={13} />}
+              label={form.pinned ? '已置顶' : '置顶'}
+            />
+            <PillToggle
+              active={form.hidden}
+              onClick={() => set({ hidden: !form.hidden, pinned: form.hidden ? form.pinned : false })}
+              icon={<IconEyeOff width={13} height={13} />}
+              label={form.hidden ? '已隐藏' : '隐藏'}
+            />
+            {isEdit && (
+              <button
+                type="button"
+                onClick={remove}
+                className="flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-3 text-xs font-medium text-ink2 transition-all hover:border-danger/40 hover:text-danger"
+              >
+                <IconTrash width={13} height={13} />
+                删除
+              </button>
             )}
-            {data.categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
+            <select
+              className={compactCls + ' ms-auto h-9 w-28 text-xs leading-[34px]'}
+              value={form.categoryId}
+              onChange={(e) => set({ categoryId: e.target.value })}
+              aria-label="分类"
+            >
+              {form.categoryId && !data.categories.some((c) => c.id === form.categoryId) && (
+                <option value={form.categoryId}>{form.categoryId}</option>
+              )}
+              {data.categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {isBatch && !isEdit ? (
-          <>
+          <div className="rounded-2xl border border-line bg-base/40 p-3.5">
             <Field label="批量链接" hint={`每行一个，支持「名称 链接」成对填写`}>
               <textarea
                 autoFocus
@@ -326,100 +342,110 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
                 onChange={(e) => setBatchText(e.target.value)}
               />
             </Field>
-            <p className="text-[11px] text-ink2/70">
+            <p className="mt-2 text-[11px] text-ink2/70">
               将添加 {batchLines} 行 · 重复网址自动跳过 · 名称留空时取自域名
             </p>
-          </>
+          </div>
         ) : (
           <>
-            <input
-              autoFocus={!isEdit}
-              className={inputCls}
-              value={form.name}
-              onChange={(e) => set({ name: e.target.value })}
-              placeholder="网站标题"
-            />
-            <div className="relative">
+            {/* 链接信息卡 */}
+            <div className="flex flex-col gap-3 rounded-2xl border border-line bg-base/40 p-3.5">
               <input
-                className={inputCls + ' pr-10 font-mono text-xs'}
-                value={form.url}
-                onChange={(e) => set({ url: e.target.value })}
-                onBlur={() => {
-                  if (form.url && !form.name.trim()) set({ name: hostOf(form.url) })
-                }}
-                placeholder="https://example.com"
+                autoFocus={!isEdit}
+                className={inputCls}
+                value={form.name}
+                onChange={(e) => set({ name: e.target.value })}
+                placeholder="网站标题"
               />
-              {isLikelyUrl(form.url) && (
-                <img
-                  src={previewIcon(form.url, form.iconUrl, form.autoIcon) || faviconUrl(form.url)}
-                  alt=""
-                  className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 rounded-sm"
+              <div className="relative">
+                <input
+                  className={inputCls + ' pr-10 font-mono text-xs'}
+                  value={form.url}
+                  onChange={(e) => set({ url: e.target.value })}
+                  onBlur={() => {
+                    if (form.url && !form.name.trim()) set({ name: hostOf(form.url) })
+                  }}
+                  placeholder="https://example.com"
                 />
-              )}
-            </div>
-
-            {/* 图标设置 */}
-            <div className="flex items-start gap-2.5">
-              <div
-                className="flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-base"
-                title="图标预览"
-              >
-                {iconPreview ? (
+                {isLikelyUrl(form.url) && (
                   <img
-                    src={iconPreview}
+                    src={previewIcon(form.url, form.iconUrl, form.autoIcon) || faviconUrl(form.url)}
                     alt=""
-                    className="h-7 w-7 rounded-md object-contain"
-                    onError={(e) => {
-                      ;(e.target as HTMLImageElement).style.visibility = 'hidden'
-                    }}
+                    className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 rounded-sm"
                   />
-                ) : (
-                  <IconImage width={18} height={18} className="text-ink2/50" />
                 )}
               </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex gap-1.5">
-                  <input
-                    className={compactCls + ' h-9 min-w-0 flex-1 text-xs'}
-                    value={form.autoIcon ? '' : form.iconUrl}
-                    disabled={form.autoIcon}
-                    onChange={(e) => set({ iconUrl: e.target.value })}
-                    placeholder={form.autoIcon ? '自动获取图标' : '图标链接…'}
-                  />
-                  <button
-                    type="button"
-                    title="自动获取"
-                    onClick={() => set({ autoIcon: true, iconUrl: '' })}
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-all ${
-                      form.autoIcon
-                        ? 'border-accent/40 bg-accent-soft text-accent'
-                        : 'border-line bg-surface text-ink2 hover:text-ink'
-                    }`}
-                  >
-                    <IconSparkles width={14} height={14} />
-                  </button>
-                  <button
-                    type="button"
-                    title="上传图标（SVG / PNG / ICO）"
-                    onClick={() => fileRef.current?.click()}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink2 transition-all hover:text-ink"
-                  >
-                    <IconUpload width={14} height={14} />
-                  </button>
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    accept=".svg,.png,.ico,image/svg+xml,image/png,image/x-icon"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0]
-                      if (f) onPickIconFile(f)
-                      e.target.value = ''
-                    }}
-                  />
+            </div>
+
+            {/* 图标设置卡 */}
+            <div className="rounded-2xl border border-line bg-base/40 p-3.5">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-xs font-medium text-ink2">
+                  <IconImage width={13} height={13} />
+                  图标
+                </span>
+                <span className="text-[10px] text-ink2/60">支持 SVG、PNG、ICO</span>
+              </div>
+              <div className="flex items-start gap-2.5">
+                <div
+                  className="flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-surface"
+                  title="图标预览"
+                >
+                  {iconPreview ? (
+                    <img
+                      src={iconPreview}
+                      alt=""
+                      className="h-7 w-7 rounded-md object-contain"
+                      onError={(e) => {
+                        ;(e.target as HTMLImageElement).style.visibility = 'hidden'
+                      }}
+                    />
+                  ) : (
+                    <IconImage width={18} height={18} className="text-ink2/50" />
+                  )}
                 </div>
-                <div className="mt-1.5 flex items-center">
-                  <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-ink2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex gap-1.5">
+                    <input
+                      className={compactCls + ' h-9 min-w-0 flex-1 text-xs'}
+                      value={form.autoIcon ? '' : form.iconUrl}
+                      disabled={form.autoIcon}
+                      onChange={(e) => set({ iconUrl: e.target.value })}
+                      placeholder={form.autoIcon ? '自动获取图标' : '图标链接…'}
+                    />
+                    <button
+                      type="button"
+                      title="自动获取"
+                      onClick={() => set({ autoIcon: true, iconUrl: '' })}
+                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border transition-all ${
+                        form.autoIcon
+                          ? 'border-accent/40 bg-accent-soft text-accent'
+                          : 'border-line bg-surface text-ink2 hover:text-ink'
+                      }`}
+                    >
+                      <IconSparkles width={14} height={14} />
+                    </button>
+                    <button
+                      type="button"
+                      title="上传图标（SVG / PNG / ICO）"
+                      onClick={() => fileRef.current?.click()}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink2 transition-all hover:text-ink"
+                    >
+                      <IconUpload width={14} height={14} />
+                    </button>
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept=".svg,.png,.ico,image/svg+xml,image/png,image/x-icon"
+                      className="hidden"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0]
+                        if (f) onPickIconFile(f)
+                        e.target.value = ''
+                      }}
+                    />
+                  </div>
+                  <label className="mt-2 flex cursor-pointer items-center gap-1.5 text-[11px] text-ink2">
                     <input
                       type="checkbox"
                       checked={form.autoIcon}
@@ -428,65 +454,67 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
                     />
                     输入链接时自动获取
                   </label>
-                  <span className="ms-auto text-[10px] text-ink2/60">支持 SVG、PNG、ICO</span>
                 </div>
               </div>
-            </div>
 
-            {/* 图标颜色 */}
-            <div className="flex items-center gap-2 ps-[62px]">
-              <span className="text-xs text-ink2">图标颜色</span>
-              <label
-                className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-lg border border-line"
-                style={{
-                  background: color
-                    ? `linear-gradient(135deg, ${color}, color-mix(in srgb, ${color} 62%, black))`
-                    : `linear-gradient(135deg, var(--c-hover), var(--c-line))`,
-                }}
-                title="选择颜色"
-              >
+              {/* 图标颜色 */}
+              <div className="mt-3.5 flex items-center gap-2 border-t border-line/70 pt-3.5">
+                <span className="text-xs text-ink2">图标颜色</span>
+                <label
+                  className="relative h-8 w-8 shrink-0 cursor-pointer overflow-hidden rounded-lg border border-line"
+                  style={{
+                    background: color
+                      ? `linear-gradient(135deg, ${color}, color-mix(in srgb, ${color} 62%, black))`
+                      : `linear-gradient(135deg, var(--c-hover), var(--c-line))`,
+                  }}
+                  title="选择颜色"
+                >
+                  <input
+                    type="color"
+                    value={/^#[0-9a-fA-F]{6}$/.test(color) ? color : '#5b5ce2'}
+                    onChange={(e) => set({ iconColor: e.target.value })}
+                    className="absolute inset-0 cursor-pointer opacity-0"
+                  />
+                </label>
                 <input
-                  type="color"
-                  value={/^#[0-9a-fA-F]{6}$/.test(color) ? color : '#5b5ce2'}
+                  className={compactCls + ' h-8 w-28 font-mono text-xs'}
+                  value={color}
                   onChange={(e) => set({ iconColor: e.target.value })}
-                  className="absolute inset-0 cursor-pointer opacity-0"
-                />
-              </label>
-              <input
-                className={compactCls + ' h-8 w-28 font-mono text-xs'}
-                value={color}
-                onChange={(e) => set({ iconColor: e.target.value })}
-                placeholder="#RRGGBB"
-              />
-              <button
-                type="button"
-                onClick={() => set({ iconColor: '' })}
-                className="whitespace-nowrap rounded-lg border border-line bg-surface px-3 py-1.5 text-xs text-ink2 transition-all hover:border-line-strong hover:text-ink"
-              >
-                自动
-              </button>
-            </div>
-
-            <Field label="添加简述" hint="悬浮卡片时显示">
-              <div className="relative">
-                <textarea
-                  className={inputCls + ' min-h-[72px] resize-y pb-8'}
-                  value={form.desc}
-                  onChange={(e) => set({ desc: e.target.value })}
-                  placeholder="添加简述…"
+                  placeholder="#RRGGBB"
                 />
                 <button
                   type="button"
-                  onClick={runAiDesc}
-                  disabled={aiLoading}
-                  title="AI 生成一句话简述"
-                  className="absolute bottom-2.5 right-3 inline-flex items-center gap-1 text-xs font-medium text-accent transition-opacity hover:opacity-75 disabled:opacity-50"
+                  onClick={() => set({ iconColor: '' })}
+                  className="whitespace-nowrap rounded-lg border border-line bg-surface px-3 py-1.5 text-xs text-ink2 transition-all hover:border-line-strong hover:text-ink"
                 >
-                  <IconSparkles width={12} height={12} />
-                  {aiLoading ? '生成中…' : 'AI 填写'}
+                  自动
                 </button>
               </div>
-            </Field>
+            </div>
+
+            {/* 简述卡 */}
+            <div className="rounded-2xl border border-line bg-base/40 p-3.5">
+              <Field label="添加简述" hint="悬浮卡片时显示">
+                <div className="relative">
+                  <textarea
+                    className={inputCls + ' min-h-[72px] resize-y pb-8'}
+                    value={form.desc}
+                    onChange={(e) => set({ desc: e.target.value })}
+                    placeholder="添加简述…"
+                  />
+                  <button
+                    type="button"
+                    onClick={runAiDesc}
+                    disabled={aiLoading}
+                    title="AI 生成一句话简述"
+                    className="absolute bottom-2.5 right-3 inline-flex items-center gap-1 text-xs font-medium text-accent transition-opacity hover:opacity-75 disabled:opacity-50"
+                  >
+                    <IconSparkles width={12} height={12} />
+                    {aiLoading ? '生成中…' : 'AI 填写'}
+                  </button>
+                </div>
+              </Field>
+            </div>
           </>
         )}
 

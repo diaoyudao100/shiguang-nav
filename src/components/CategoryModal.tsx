@@ -6,10 +6,12 @@ import { IconArrowUp, IconTrash, IconPlus } from './icons'
 import { IconPicker } from './IconPicker'
 import { categoryIcon } from '../lib/categoryIcons'
 import { useToast } from './Toast'
+import { useConfirm } from './Confirm'
 
 export function CategoryModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { data, addCategory, renameCategory, setCategoryIcon, deleteCategory, moveCategory } = useStore()
   const toast = useToast()
+  const confirm = useConfirm()
   const [newName, setNewName] = useState('')
   const [newIcon, setNewIcon] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -97,8 +99,28 @@ export function CategoryModal({ open, onClose }: { open: boolean; onClose: () =>
                   <IconArrowUp width={13} height={13} className="rotate-180" />
                 </button>
                 <button
-                  onClick={() => {
-                    if (window.confirm(`删除分类「${c.name}」？其中的站点会移入其他分类。`)) {
+                  onClick={async () => {
+                    const siteCount = countOf(c.id)
+                    const ok = await confirm({
+                      danger: true,
+                      title: '删除分类',
+                      message: (
+                        <>
+                          确定删除分类「<span className="font-medium text-ink">{c.name}</span>」吗？
+                          {siteCount > 0 ? (
+                            <>
+                              <br />
+                              其中的 <span className="font-medium text-ink">{siteCount}</span>{' '}
+                              个站点会移入其他分类。
+                            </>
+                          ) : (
+                            '该分类下没有站点。'
+                          )}
+                        </>
+                      ),
+                      okText: '删除',
+                    })
+                    if (ok) {
                       deleteCategory(c.id)
                       toast('分类已删除')
                     }

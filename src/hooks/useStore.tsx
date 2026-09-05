@@ -118,7 +118,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         /* 存储满等异常：忽略 */
       }
       if (!user) setSync({ state: 'saved', time: Date.now(), cloud: false })
-    }, 400)
+    }, 150)
     return () => clearTimeout(localTimer.current)
   }, [data, user])
 

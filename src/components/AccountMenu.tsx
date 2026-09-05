@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
+import { useStore } from '../hooks/useStore'
 import { navigate } from '../lib/router'
 import { Field, Modal, inputCls } from './Modal'
 import { useToast } from './Toast'
 
 export function AccountMenu() {
   const { user, setUser, refresh } = useAuth()
+  const { data } = useStore()
   const toast = useToast()
   const [open, setOpen] = useState(false)
   const [nameModal, setNameModal] = useState(false)
@@ -24,13 +26,21 @@ export function AccountMenu() {
 
   if (!user) {
     return (
-      <button onClick={() => navigate('/login')} className="btn-ghost">
+      <button onClick={() => navigate('/login')} className="btn-ghost h-10">
         登录 / 注册
       </button>
     )
   }
 
   const logout = async () => {
+    // 登出前把本地改动尽力推到云端，避免登出后重登拉回旧云端数据（例如“删掉的分类又回来”）
+    if (user) {
+      try {
+        await api.putData(data)
+      } catch {
+        /* 网络失败时忽略：云端可能短暂滞后 */
+      }
+    }
     try {
       await api.logout()
     } finally {
@@ -56,7 +66,7 @@ export function AccountMenu() {
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-line bg-surface transition-all hover:border-line-strong"
+        className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-[13px] border border-line bg-surface/70 shadow-sm transition-all duration-150 hover:-translate-y-px hover:border-line-strong hover:shadow-card hover:ring-2 hover:ring-accent/40"
         title={user.name}
         aria-label="账户菜单"
       >
@@ -64,7 +74,7 @@ export function AccountMenu() {
           <img src={user.avatar} alt="" className="h-full w-full object-cover" />
         ) : (
           <span
-            className="flex h-full w-full items-center justify-center text-[13px] font-semibold text-white"
+            className="flex h-full w-full items-center justify-center text-[15px] font-semibold text-white"
             style={{ background: 'linear-gradient(135deg, var(--c-accent), var(--c-accent2))' }}
           >
             {user.name.charAt(0).toUpperCase()}
@@ -73,7 +83,7 @@ export function AccountMenu() {
       </button>
 
       {open && (
-        <div className="glass-panel anim-pop absolute right-0 top-11 z-50 w-56 rounded-2xl p-1.5 shadow-pop">
+        <div className="glass-panel anim-pop absolute right-0 top-12 z-50 w-56 rounded-2xl p-1.5 shadow-pop">
           <div className="px-3 py-2">
             <div className="truncate text-sm font-medium">{user.name}</div>
             <div className="truncate text-[11px] text-ink2">{user.email ?? (user.role === 'admin' ? '管理员' : '成员')}</div>

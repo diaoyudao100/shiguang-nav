@@ -45,21 +45,25 @@ export function Modal({
       }}
     >
       <div
-        className={`anim-pop flex max-h-[86vh] w-full flex-col overflow-hidden rounded-[20px] border border-line bg-surface shadow-pop ${width}`}
+        className={`modal-card anim-pop flex max-h-[86vh] w-full flex-col overflow-hidden rounded-[22px] ${width}`}
         role="dialog"
         aria-modal="true"
       >
         <div className="flex items-center justify-between px-5 pb-3.5 pt-4">
           <div className="flex min-w-0 items-center gap-2.5">
-            <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
+            <span
+              aria-hidden
+              className="h-2 w-2 shrink-0 rounded-full bg-gradient-to-br from-[var(--c-accent)] to-[var(--c-accent2)] shadow-[0_0_8px_color-mix(in_srgb,var(--c-accent)_60%,transparent)]"
+            />
+            <h2 className="text-base font-semibold tracking-tight">{title}</h2>
             {headerExtra}
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-ink2 transition-colors hover:bg-hover hover:text-ink"
+            className="flex h-7 w-7 items-center justify-center rounded-full text-ink2 transition-colors hover:bg-hover hover:text-ink"
             aria-label="关闭"
           >
-            <IconX width={17} height={17} />
+            <IconX width={15} height={15} />
           </button>
         </div>
         <div className="border-t border-line" />

@@ -12,6 +12,7 @@ import { LinkModal } from './components/LinkModal'
 import { CategoryModal } from './components/CategoryModal'
 import { DataModal } from './components/DataModal'
 import { SettingsModal } from './components/SettingsModal'
+import { IconGlobe } from './components/icons'
 import { AuthPage } from './pages/AuthPage'
 import { AdminPage } from './pages/AdminPage'
 import { useToast } from './components/Toast'
@@ -91,10 +92,13 @@ function Shell() {
           </div>
 
           {data.sites.length === 0 && !(scope === 'in' && query) && (
-            <div className="mt-2 rounded-2xl border border-dashed border-line-strong/60 py-16 text-center">
-              <p className="text-sm font-medium">这里还是空的</p>
+            <div className="mt-2 flex flex-col items-center rounded-2xl border border-dashed border-line-strong/60 px-6 py-16 text-center">
+              <span className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft text-accent shadow-[var(--shadow-glow)]">
+                <IconGlobe width={24} height={24} />
+              </span>
+              <p className="text-[15px] font-medium text-ink">这里还是空的</p>
               <p className="mt-1.5 text-xs text-ink2">添加第一个网站，或从浏览器书签一键导入</p>
-              <div className="mt-5 flex justify-center gap-2.5">
+              <div className="mt-6 flex justify-center gap-2.5">
                 <button onClick={() => openAdd(null)} className="btn-primary">
                   添加网站
                 </button>
@@ -105,18 +109,26 @@ function Shell() {
             </div>
           )}
 
-          <footer className="mt-12 border-t border-line pt-5 pb-8 text-xs text-ink2/80">
-            <div className="flex items-center justify-end gap-4">
+          <footer className="mt-14 border-t border-line pt-6 pb-10">
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-ink2/80">
               <button onClick={() => setDataModal(true)} className="transition-colors hover:text-ink">
                 导入 / 导出
               </button>
               <button onClick={() => setCatModal(true)} className="transition-colors hover:text-ink">
                 管理分类
               </button>
+              <a
+                href="https://github.com/diaoyudao100/shiguang-nav"
+                target="_blank"
+                rel="noreferrer noopener"
+                className="transition-colors hover:text-ink"
+              >
+                GitHub 开源
+              </a>
             </div>
-            <div className="mt-5 text-center tracking-wide">
-              {data.settings.siteTitle?.trim() || '拾光导航'} · v2.1.0 · 本地优先，数据尽在掌控
-            </div>
+            <p className="mt-4 text-center text-[11px] tracking-wide text-ink2/50">
+              {data.settings.siteTitle?.trim() || '拾光导航'} · v2.2.0 · 本地优先，数据尽在掌控
+            </p>
           </footer>
         </main>
       </div>

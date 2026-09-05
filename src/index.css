@@ -82,28 +82,38 @@ html {
   transition: background-color 0.3s ease;
 }
 
-/* 背景灰调预设（外观页可切换） */
+/* 背景灰调预设（外观页可切换）：zinc=默认（不写属性）；slate/neutral 覆盖整站底色与卡片表面，肉眼可辨 */
 html[data-bg='slate'] {
-  --c-base: #f2f4f8;
-  --c-hover: #e8ecf2;
-  --c-line: rgba(15, 23, 42, 0.08);
+  --c-base: #eef2f8;
+  --c-hover: #e1e7f1;
+  --c-surface: #fdfdff;
+  --c-line: rgba(30, 41, 59, 0.1);
+  --c-line-strong: rgba(30, 41, 59, 0.19);
+  --dot: rgba(30, 41, 59, 0.09);
 }
 html[data-bg='slate'].dark {
-  --c-base: #0b0e13;
-  --c-surface: #141922;
-  --c-hover: #1c232e;
-  --c-line: rgba(148, 163, 184, 0.12);
+  --c-base: #0a0f17;
+  --c-surface: #121a26;
+  --c-hover: #1a2331;
+  --c-line: rgba(148, 163, 184, 0.13);
+  --c-line-strong: rgba(148, 163, 184, 0.24);
+  --dot: rgba(148, 163, 184, 0.07);
 }
 html[data-bg='neutral'] {
-  --c-base: #f5f4f1;
-  --c-hover: #edebe6;
-  --c-line: rgba(28, 25, 23, 0.08);
+  --c-base: #f5f3ee;
+  --c-hover: #edeae2;
+  --c-surface: #fffefb;
+  --c-line: rgba(68, 64, 60, 0.09);
+  --c-line-strong: rgba(68, 64, 60, 0.18);
+  --dot: rgba(68, 64, 60, 0.08);
 }
 html[data-bg='neutral'].dark {
   --c-base: #0d0c0a;
   --c-surface: #161513;
-  --c-hover: #211f1c;
-  --c-line: rgba(231, 229, 228, 0.1);
+  --c-hover: #211f1b;
+  --c-line: rgba(231, 229, 228, 0.11);
+  --c-line-strong: rgba(231, 229, 228, 0.22);
+  --dot: rgba(231, 229, 228, 0.06);
 }
 
 /* 强调色预设（外观页可切换）：软底色与光晕自动跟随 */
@@ -219,8 +229,23 @@ select:focus-visible {
   background: var(--c-line-strong);
   border-radius: 8px;
 }
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--c-text2) 45%, transparent);
+}
 *::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* 触屏设备不产生“卡住的悬浮态” */
+@media (hover: none) {
+  .group:hover .card-actions,
+  .group:hover .icon-tile {
+    opacity: 0;
+    transform: none;
+  }
+  .group:hover .icon-tile {
+    transform: none;
+  }
 }
 
 /* ============================================================
@@ -229,6 +254,7 @@ select:focus-visible {
 @layer components {
   /* 卡片：发丝线 + 分层阴影 + 悬浮抬升 */
   .card {
+    position: relative;
     background-color: var(--c-surface);
     border: 1px solid var(--c-line);
     border-radius: 1rem;
@@ -236,10 +262,37 @@ select:focus-visible {
     transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease,
       border-color 0.2s ease, background-color 0.3s ease;
   }
+  /* 卡片顶部柔和的光晕渐变（主题色） */
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: radial-gradient(
+      420px 130px at 50% -24%,
+      color-mix(in srgb, var(--c-accent) 8%, transparent),
+      transparent 72%
+    );
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+  .card:hover::before {
+    opacity: 1;
+  }
   .card:hover {
     transform: translateY(-2px);
     border-color: var(--c-line-strong);
     box-shadow: var(--shadow-hover);
+  }
+  @media (hover: none) {
+    .card:hover {
+      transform: none;
+      box-shadow: var(--shadow-card);
+    }
+    .card:hover::before {
+      opacity: 0;
+    }
   }
 
   /* 玻璃面板 */
@@ -248,6 +301,17 @@ select:focus-visible {
     -webkit-backdrop-filter: blur(18px) saturate(1.5);
     backdrop-filter: blur(18px) saturate(1.5);
     border: 1px solid var(--c-line);
+  }
+  /* 弹窗 / 登录主卡：更通透的高质感毛玻璃 */
+  .modal-card {
+    background: color-mix(in srgb, var(--c-surface) 78%, transparent);
+    -webkit-backdrop-filter: blur(26px) saturate(1.5);
+    backdrop-filter: blur(26px) saturate(1.5);
+    border: 1px solid var(--c-line);
+    box-shadow: var(--shadow-pop);
+  }
+  .dark .modal-card {
+    background: color-mix(in srgb, var(--c-surface) 88%, transparent);
   }
   .glass-header {
     background: color-mix(in srgb, var(--c-base) 72%, transparent);
@@ -345,24 +409,38 @@ select:focus-visible {
     -webkit-text-fill-color: transparent;
   }
 
+  /* 分组面板：毛玻璃分区容器（分类/置顶卡片墙的“画布”） */
+  .panel-section {
+    background: color-mix(in srgb, var(--c-surface) 46%, transparent);
+    border: 1px solid var(--c-line);
+    border-radius: 22px;
+    box-shadow: var(--shadow-sm);
+    transition: border-color 0.2s ease, background-color 0.3s ease, box-shadow 0.2s ease;
+  }
+  .dark .panel-section {
+    background: color-mix(in srgb, var(--c-surface) 55%, transparent);
+  }
+
   /* 图标底座（favicon 容器） */
   .icon-tile {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     flex-shrink: 0;
-    border-radius: 12px;
+    border-radius: 13px;
     border: 1px solid var(--c-line);
     background: color-mix(in srgb, var(--c-hover) 55%, var(--c-surface));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
-    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease;
+    transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease,
+      box-shadow 0.2s ease;
     overflow: hidden;
   }
   .group:hover .icon-tile {
-    transform: scale(1.06);
+    transform: translateY(-1px) scale(1.06);
     border-color: var(--c-line-strong);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--shadow-sm);
   }
 
   /* 卡片右上操作条：玻璃小胶囊 */

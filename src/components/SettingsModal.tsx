@@ -7,6 +7,7 @@ import { api } from '../lib/api'
 import { Field, Modal, compactCls, inputCls } from './Modal'
 import { BrandLogo } from './BrandLogo'
 import { useToast } from './Toast'
+import { useConfirm } from './Confirm'
 import { aiListModels, aiTestConnection, aiDescribeSite } from '../lib/ai'
 import type { Settings, ThemeMode } from '../types'
 import { IconBot, IconDatabase, IconDownload, IconGlobe, IconKey, IconPalette, IconSparkles } from './icons'
@@ -31,9 +32,9 @@ const ACCENTS = [
 ]
 
 const BGS = [
-  { id: 'zinc', name: '高级灰 (Zinc)', desc: '纯净无色值', preview: 'linear-gradient(135deg, #a1a1aa, #52525b)' },
-  { id: 'slate', name: '青灰 (Slate)', desc: '经典冷色调', preview: 'linear-gradient(135deg, #94a3b8, #475569)' },
-  { id: 'neutral', name: '暖灰 (Neutral)', desc: '柔和舒适', preview: 'linear-gradient(135deg, #a8a29e, #57534e)' },
+  { id: 'zinc', name: '高级灰 (Zinc)', desc: '中性灰调', preview: 'linear-gradient(135deg, #e7e8ee, #b9bac6)' },
+  { id: 'slate', name: '青灰 (Slate)', desc: '冷调偏蓝', preview: 'linear-gradient(135deg, #d9e2ee, #9db1d0)' },
+  { id: 'neutral', name: '暖灰 (Neutral)', desc: '暖调米色', preview: 'linear-gradient(135deg, #ece7dd, #c3baa6)' },
 ] as const
 
 const MODEL_SUGGESTIONS = [
@@ -52,6 +53,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
   const { setMode } = useTheme()
   const { user } = useAuth()
   const toast = useToast()
+  const confirm = useConfirm()
   const faviconFileRef = useRef<HTMLInputElement>(null)
   const bgFileRef = useRef<HTMLInputElement>(null)
   const [tab, setTab] = useState<Tab>('site')
@@ -307,7 +309,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
   return (
     <Modal open={open} title="设置" onClose={onClose} width="max-w-[560px]">
       {/* 标签页：一行最多容纳 6 个，超出自动换行 */}
-      <div className="mb-5 flex gap-1 rounded-xl bg-base p-1">
+      <div className="mb-5 flex gap-1 rounded-[14px] border border-line bg-base/50 p-1 shadow-sm">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -857,8 +859,14 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
             )}
           </div>
           <button
-            onClick={() => {
-              if (window.confirm('确定清空所有数据并恢复为初始示例吗？此操作不可撤销。')) {
+            onClick={async () => {
+              const ok = await confirm({
+                danger: true,
+                title: '重置全部数据',
+                message: '确定清空所有数据并恢复为初始示例吗？此操作不可撤销。',
+                okText: '清空并恢复',
+              })
+              if (ok) {
                 resetAll()
                 toast('已恢复初始数据')
                 onClose()
@@ -883,7 +891,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
               />
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{form.siteTitle || '拾光导航'}</div>
-                <div className="mt-0.5 text-xs text-ink2">v2.1.0 · 个人网址导航</div>
+                <div className="mt-0.5 text-xs text-ink2">v2.2.0 · 个人网址导航</div>
               </div>
               <a
                 href="https://github.com/diaoyudao100/shiguang-nav"

@@ -4,6 +4,7 @@ import { downloadFile, exportBookmarksHtml, importBookmarksHtml } from '../lib/b
 import { Modal, btnGhost, btnPrimary } from './Modal'
 import { IconDownload, IconUpload } from './icons'
 import { useToast } from './Toast'
+import { useConfirm } from './Confirm'
 import type { NavData } from '../types'
 
 function readText(file: File): Promise<string> {
@@ -18,6 +19,7 @@ function readText(file: File): Promise<string> {
 export function DataModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { data, mergeImport, replaceAll, resetAll } = useStore()
   const toast = useToast()
+  const confirm = useConfirm()
   const bookmarkInput = useRef<HTMLInputElement>(null)
   const jsonInput = useRef<HTMLInputElement>(null)
   const [mode, setMode] = useState<'merge' | 'replace'>('merge')
@@ -181,8 +183,14 @@ export function DataModal({ open, onClose }: { open: boolean; onClose: () => voi
         当前共 {data.categories.length} 个分类、{data.sites.length} 个站点。所有数据保存在浏览器 localStorage，换浏览器/清缓存前请先导出备份。
         <button
           className="ml-1 text-danger underline underline-offset-2"
-          onClick={() => {
-            if (window.confirm('确定清空所有数据并恢复为初始示例吗？此操作不可撤销。')) {
+          onClick={async () => {
+            const ok = await confirm({
+              danger: true,
+              title: '重置全部数据',
+              message: '确定清空所有数据并恢复为初始示例吗？此操作不可撤销。',
+              okText: '清空并恢复',
+            })
+            if (ok) {
               resetAll()
               toast('已恢复初始数据')
               onClose()

@@ -1,7 +1,7 @@
 import { LayoutGrid } from 'lucide-react'
 import { useStore } from '../hooks/useStore'
 import { categoryIcon } from '../lib/categoryIcons'
-import { IconFolder, IconPin, IconSettings } from './icons'
+import { IconDatabase, IconPin, IconSettings } from './icons'
 
 interface SidebarProps {
   activeCat: string | null // null = 全部
@@ -11,6 +11,58 @@ interface SidebarProps {
   onDropToCategory: (catId: string) => void
   mobileOpen: boolean
   onCloseMobile: () => void
+}
+
+/** 目录行小卡片：置入左侧目录托盘内，每行独立成卡 */
+function Row({
+  active,
+  ring,
+  icon,
+  label,
+  count,
+  onClick,
+  onDragOver,
+  onDrop,
+}: {
+  active: boolean
+  ring?: boolean
+  icon: React.ReactNode
+  label: string
+  count?: number
+  onClick: () => void
+  onDragOver?: (e: React.DragEvent) => void
+  onDrop?: (e: React.DragEvent) => void
+}) {
+  return (
+    <button
+      onClick={onClick}
+      onDragOver={onDragOver}
+      onDrop={onDrop}
+      className={`relative flex h-11 w-full shrink-0 items-center gap-2.5 rounded-[12px] border px-2.5 text-sm transition-all duration-150 ${
+        active
+          ? 'border-accent/30 bg-accent-soft text-accent shadow-sm'
+          : 'border-line bg-surface/85 text-ink hover:-translate-y-px hover:border-line-strong hover:bg-surface hover:shadow-card'
+      } ${ring ? 'ring-2 ring-accent/40' : ''}`}
+    >
+      <span
+        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[9px] border transition-colors ${
+          active ? 'border-accent/25 bg-accent/10 text-accent' : 'border-line bg-base text-ink2'
+        }`}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-left">{label}</span>
+      {typeof count === 'number' && (
+        <span
+          className={`shrink-0 rounded-full px-2 text-[11px] font-normal leading-[18px] tabular-nums ${
+            active ? 'bg-accent/15 text-accent' : 'bg-hover text-ink2'
+          }`}
+        >
+          {count}
+        </span>
+      )}
+    </button>
+  )
 }
 
 export function Sidebar({
@@ -23,88 +75,94 @@ export function Sidebar({
   onCloseMobile,
 }: SidebarProps) {
   const { data } = useStore()
+  const total = data.sites.filter((s) => !s.hidden).length
   const pinnedCount = data.sites.filter((s) => s.pinned && !s.hidden).length
   const countOf = (id: string) => data.sites.filter((s) => s.categoryId === id && !s.hidden).length
 
-  const itemCls = (active: boolean) =>
-    `relative flex h-9 w-full items-center gap-2 rounded-[10px] px-3 text-sm transition-all ${
-      active ? 'bg-accent-soft text-accent' : 'text-ink hover:bg-hover'
-    }`
+  const rowProps = (id: string | null) => ({
+    active: activeCat === id,
+    onClick: () => {
+      onSelect(id)
+      onCloseMobile()
+    },
+  })
+  const dropProps = (id: string) => ({
+    onDragOver: (e: React.DragEvent) => dragActiveId && e.preventDefault(),
+    onDrop: () => dragActiveId && onDropToCategory(id),
+  })
 
   return (
     <>
-      {mobileOpen && <div className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden" onClick={onCloseMobile} />}
+      {mobileOpen && <div className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden" onClick={() => onCloseMobile()} />}
       <aside
-        className={`fixed inset-y-0 left-0 z-30 flex w-64 shrink-0 flex-col overflow-y-auto bg-surface p-4 transition-transform md:sticky md:top-16 md:z-0 md:h-[calc(100vh-4rem)] md:translate-x-0 md:border-r md:border-line md:bg-surface/50 ${
-          mobileOpen ? 'translate-x-0 shadow-xl' : '-translate-x-full'
+        className={`fixed inset-y-0 left-0 z-30 flex w-64 shrink-0 flex-col p-3 transition-transform duration-300 md:sticky md:top-16 md:z-0 md:h-[calc(100vh-4rem)] md:translate-x-0 md:p-3.5 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <div className="eyebrow flex items-center gap-2 px-2 pb-2.5 pt-1 text-ink">
-          <IconFolder width={11} height={11} className="tracking-normal" /> 分类目录
-          <button
-            onClick={onManage}
-            title="管理分类"
-            aria-label="管理分类"
-            className="ml-auto flex h-6 w-6 items-center justify-center rounded-md text-ink2 transition-colors hover:bg-hover hover:text-accent"
-          >
-            <IconSettings width={13} height={13} />
-          </button>
-        </div>
-        <nav className="flex flex-col gap-0.5">
-          <button
-            className={itemCls(null === activeCat)}
-            onClick={() => {
-              onSelect(null)
-              onCloseMobile()
-            }}
-          >
-            <LayoutGrid width={13} height={13} className={null === activeCat ? '' : 'opacity-70'} />
-            全部网站
-            <span className="ml-auto text-xs tabular-nums text-ink">
-              {data.sites.filter((s) => !s.hidden).length}
+        {/* 目录托盘：一块独立的毛玻璃底座，把右侧面板隔开；行与行仍是独立小卡片 */}
+        <div
+          className={`flex h-full min-h-0 flex-col overflow-hidden rounded-[20px] border border-line bg-base/45 p-2.5 shadow-sm backdrop-blur-xl md:rounded-[22px] md:p-3 ${
+            mobileOpen ? 'shadow-2xl' : ''
+          }`}
+        >
+          {/* 托盘头部：标题 + 管理 */}
+          <div className="flex shrink-0 items-center justify-between px-1.5 pb-2 pt-0.5">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.3em] text-ink2/60">
+              分类目录
             </span>
-          </button>
-          <button
-            className={`${itemCls(activeCat === '__pinned__')} ${dragActiveId ? 'ring-2 ring-accent/40' : ''}`}
-            onClick={() => {
-              onSelect('__pinned__')
-              onCloseMobile()
-            }}
-            onDragOver={(e) => dragActiveId && e.preventDefault()}
-            onDrop={() => dragActiveId && onDropToCategory('__pinned__')}
-          >
-            <IconPin width={13} height={13} className={activeCat === '__pinned__' ? '' : 'opacity-70'} />
-            置顶网站
-            <span className="ml-auto text-xs tabular-nums text-ink">{pinnedCount}</span>
-          </button>
-          {data.categories.map((c) => {
-            const CatIcon = categoryIcon(c.icon)
-            return (
-              <button
-                key={c.id}
-                className={`${itemCls(activeCat === c.id)} ${dragActiveId ? 'ring-2 ring-transparent' : ''}`}
-                onClick={() => {
-                  onSelect(c.id)
-                  onCloseMobile()
-                }}
-                onDragOver={(e) => dragActiveId && e.preventDefault()}
-                onDrop={() => dragActiveId && onDropToCategory(c.id)}
-              >
-                {activeCat === c.id && (
-                  <span className="absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full bg-gradient-to-b from-[var(--c-accent)] to-[var(--c-accent2)]" />
-                )}
-                <CatIcon width={13} height={13} className={activeCat === c.id ? '' : 'opacity-70'} />
-                <span className="truncate">{c.name}</span>
-                <span className="ml-auto shrink-0 text-xs tabular-nums text-ink">{countOf(c.id)}</span>
-              </button>
-            )
-          })}
-        </nav>
-        <p className="mt-auto px-2 pt-8 text-xs leading-5 text-ink2/60">
-          数据保存在浏览器本地
-          <br />
-          支持书签 / JSON 导入导出
-        </p>
+            <button
+              onClick={onManage}
+              title="管理分类"
+              aria-label="管理分类"
+              className="flex h-7 w-7 items-center justify-center rounded-full text-ink2 transition-colors hover:bg-hover hover:text-accent"
+            >
+              <IconSettings width={14} height={14} />
+            </button>
+          </div>
+
+          {/* 小卡片列表区（内部滚动） */}
+          <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-0.5">
+            <Row
+              icon={<LayoutGrid width={14} height={14} />}
+              label="全部网站"
+              count={total}
+              {...rowProps(null)}
+            />
+            <Row
+              icon={<IconPin width={14} height={14} />}
+              label="置顶网站"
+              count={pinnedCount}
+              ring={!!dragActiveId}
+              {...rowProps('__pinned__')}
+              {...(dragActiveId ? { ...dropProps('__pinned__') } : {})}
+            />
+            {data.categories.map((c) => {
+              const CatIcon = categoryIcon(c.icon)
+              return (
+                <Row
+                  key={c.id}
+                  icon={<CatIcon width={14} height={14} />}
+                  label={c.name}
+                  count={countOf(c.id)}
+                  ring={!!dragActiveId}
+                  {...rowProps(c.id)}
+                  {...(dragActiveId ? { ...dropProps(c.id) } : {})}
+                />
+              )
+            })}
+          </div>
+
+          {/* 托盘底部：数据说明 */}
+          <div className="mt-2.5 shrink-0 border-t border-line px-1.5 pt-2.5">
+            <div className="flex items-center gap-2 text-[11px] font-medium text-ink2">
+              <IconDatabase width={12} height={12} className="shrink-0 opacity-70" />
+              数据保存在浏览器本地
+            </div>
+            <p className="mt-1 pl-[18px] text-[11px] leading-4 text-ink2/55">
+              支持书签 / JSON 导入导出
+            </p>
+          </div>
+        </div>
       </aside>
     </>
   )

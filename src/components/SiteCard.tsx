@@ -25,7 +25,7 @@ export function Favicon({ site }: { site: Site }) {
   if (failed || !url) {
     return (
       <div
-        className="icon-tile font-semibold text-white"
+        className="icon-tile text-base font-semibold text-white"
         style={{
           background: `linear-gradient(135deg, ${color}, color-mix(in srgb, ${color} 62%, black))`,
         }}
@@ -39,11 +39,11 @@ export function Favicon({ site }: { site: Site }) {
       <img
         src={url}
         alt=""
-        width={20}
-        height={20}
+        width={24}
+        height={24}
         loading="lazy"
         onError={() => setFailed(true)}
-        className="h-5 w-5 rounded-[5px] object-contain"
+        className="h-6 w-6 rounded-[7px] object-contain"
       />
     </div>
   )
@@ -87,13 +87,13 @@ export function SiteCard({
       onDragEnd={onDragEnd}
       onDragOver={(e) => onDragOverCard?.(e, site)}
       onDrop={(e) => onDropCard?.(e, site)}
-      className={`group card relative z-0 p-2.5 transition-[height] hover:z-30 ${
+      className={`group card relative z-0 p-3 transition-[height] hover:z-30 ${
         sortMode ? 'cursor-grab border-accent/40 ring-1 ring-accent/25' : 'cursor-pointer'
       } ${isDragging || site.hidden ? 'opacity-60' : ''} ${dropEdge === 'top' ? 'drop-line-top' : ''} ${
         dropEdge === 'bottom' ? 'drop-line-bottom' : ''
       }`}
     >
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center gap-3">
         <Favicon site={site} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
@@ -102,7 +102,7 @@ export function SiteCard({
               target="_blank"
               rel="noreferrer noopener"
               onClick={(e) => e.stopPropagation()}
-              className="truncate text-[15px] leading-5 transition-colors hover:text-accent"
+              className="truncate text-[15px] font-medium leading-6 transition-colors hover:text-accent"
               title={site.name}
             >
               <Highlight text={site.name} query={query} />
@@ -120,9 +120,9 @@ export function SiteCard({
         </div>
       </div>
 
-      {/* 悬浮注释：简介以浮层形式出现在卡片下方 */}
+      {/* 悬浮注释：简介以毛玻璃气泡形式出现在卡片下方 */}
       {site.desc && (
-        <div className="pointer-events-none absolute inset-x-2.5 top-[calc(100%+6px)] z-30 rounded-xl border border-line bg-surface px-3 py-2 text-xs leading-5 text-ink2 opacity-0 shadow-pop translate-y-1 transition-all duration-150 group-hover:opacity-100 group-hover:translate-y-0">
+        <div className="pointer-events-none absolute inset-x-2.5 top-[calc(100%+8px)] z-30 rounded-xl border border-line bg-surface/95 px-3.5 py-2.5 text-xs leading-5 text-ink2 opacity-0 shadow-pop backdrop-blur-md translate-y-1 transition-all duration-150 group-hover:opacity-100 group-hover:translate-y-0">
           <Highlight text={site.desc} query={query} />
         </div>
       )}

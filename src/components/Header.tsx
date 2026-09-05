@@ -39,7 +39,7 @@ function SyncChip() {
         ? 'bg-danger'
         : 'bg-emerald-400'
   return (
-    <span className="hidden items-center gap-1.5 rounded-full border border-line bg-surface/60 px-2.5 py-1 text-[11px] text-ink2 lg:flex">
+    <span className="hidden h-10 items-center gap-1.5 rounded-full border border-line bg-surface/60 px-3 text-[11px] text-ink2 lg:flex">
       <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
       {label}
     </span>
@@ -78,12 +78,12 @@ function ThemeSwitch() {
         onClick={() => setOpen((v) => !v)}
         title={`主题：${current.title}（点击切换）`}
         aria-label="切换主题"
-        className="flex items-center justify-center rounded-full border border-line bg-surface/60 p-2 text-ink2 transition-all hover:border-line-strong hover:text-ink"
+        className="flex h-8 w-8 items-center justify-center rounded-[9px] text-ink2 transition-colors hover:bg-hover hover:text-ink"
       >
         <current.icon width={15} height={15} />
       </button>
       {open && (
-        <div className="glass-panel anim-pop absolute right-0 top-10 z-50 w-32 rounded-2xl p-1.5 shadow-pop">
+        <div className="glass-panel anim-pop absolute right-0 top-12 z-50 w-32 rounded-2xl p-1.5 shadow-pop">
           {opts.map((o) => (
             <button
               key={o.id}
@@ -120,6 +120,7 @@ interface HeaderProps {
 export function Header({ onAdd, onSettings, onToggleSidebar, sortMode, onToggleSort, search }: HeaderProps) {
   const clock = useClock()
   const { data } = useStore()
+  const { user } = useAuth()
   const brand = data.settings.siteTitle?.trim() || '拾光导航'
   return (
     <header className="glass-header sticky top-0 z-40">
@@ -141,7 +142,10 @@ export function Header({ onAdd, onSettings, onToggleSidebar, sortMode, onToggleS
             </div>
           </div>
         </div>
-        <span className="hidden font-mono text-[11px] text-ink2/60 xl:inline">~/Y-{clock}</span>
+        <span aria-hidden className="hidden shrink-0 items-center gap-3 xl:flex">
+          <span className="h-4 w-px bg-line-strong/60" />
+          <span className="clock-display text-[17px] leading-none">{clock}</span>
+        </span>
 
         {/* 顶栏中部搜索框 */}
         <div className="mx-2 hidden min-w-0 flex-1 md:block">
@@ -150,30 +154,38 @@ export function Header({ onAdd, onSettings, onToggleSidebar, sortMode, onToggleS
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
           <SyncChip />
-          <ThemeSwitch />
-          <button
-            onClick={onToggleSort}
-            className={`flex items-center justify-center rounded-full border p-2 transition-all ${
-              sortMode
-                ? 'border-accent/50 bg-accent/10 text-accent'
-                : 'border-line bg-surface/60 text-ink2 hover:border-line-strong hover:text-ink'
-            }`}
-            aria-pressed={sortMode}
-            aria-label="排序模式"
-            title={sortMode ? '退出排序模式' : '排序模式：拖拽调整网址卡片顺序'}
-          >
-            <IconSort width={15} height={15} />
-          </button>
-          <button
-            onClick={onSettings}
-            className="rounded-full border border-line bg-surface/60 p-2 text-ink2 transition-all hover:border-line-strong hover:text-ink"
-            aria-label="设置"
-            title="设置"
-          >
-            <IconSettings width={15} height={15} />
-          </button>
-          <AccountMenu />
-          <button onClick={onAdd} className="btn-primary">
+          {/* 三模块：主题 / 排序 / 设置，整体由一张卡包裹 */}
+          <div className="flex h-10 items-center gap-0.5 rounded-[13px] border border-line bg-surface/70 p-1 shadow-sm">
+            <ThemeSwitch />
+            <button
+              onClick={onToggleSort}
+              className={`flex h-8 w-8 items-center justify-center rounded-[9px] transition-colors ${
+                sortMode ? 'bg-accent-soft text-accent' : 'text-ink2 hover:bg-hover hover:text-ink'
+              }`}
+              aria-pressed={sortMode}
+              aria-label="排序模式"
+              title={sortMode ? '退出排序模式' : '排序模式：拖拽调整网址卡片顺序'}
+            >
+              <IconSort width={15} height={15} />
+            </button>
+            <button
+              onClick={onSettings}
+              className="flex h-8 w-8 items-center justify-center rounded-[9px] text-ink2 transition-colors hover:bg-hover hover:text-ink"
+              aria-label="设置"
+              title="设置"
+            >
+              <IconSettings width={15} height={15} />
+            </button>
+          </div>
+          {user ? (
+            <>
+              <span className="h-5 w-px bg-line" />
+              <AccountMenu />
+            </>
+          ) : (
+            <AccountMenu />
+          )}
+          <button onClick={onAdd} className="btn-primary h-10 px-5">
             <IconPlus width={14} height={14} /> 添加
           </button>
         </div>

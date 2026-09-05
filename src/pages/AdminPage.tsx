@@ -3,6 +3,7 @@ import { api, type AdminOverview } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
 import { navigate } from '../lib/router'
 import { useToast } from '../components/Toast'
+import { useConfirm } from '../components/Confirm'
 import { avatarColor } from '../lib/favicon'
 import { btnGhost, btnPrimary, inputCls } from '../components/Modal'
 import { IconArrowUp, IconCopy, IconPlus, IconTrash } from '../components/icons'
@@ -26,6 +27,7 @@ function fmtDate(ts: number | null): string {
 export function AdminPage() {
   const { user, loading } = useAuth()
   const toast = useToast()
+  const confirm = useConfirm()
   const [overview, setOverview] = useState<AdminOverview | null>(null)
   const [error, setError] = useState('')
   const [newCode, setNewCode] = useState('')
@@ -209,7 +211,17 @@ export function AdminPage() {
                   </button>
                   <button
                     onClick={async () => {
-                      if (!window.confirm(`删除邀请码 ${inv.code}？`)) return
+                      const ok = await confirm({
+                        danger: true,
+                        title: '删除邀请码',
+                        message: (
+                          <>
+                            确定删除邀请码 <span className="font-mono font-medium text-ink">{inv.code}</span> 吗？
+                          </>
+                        ),
+                        okText: '删除',
+                      })
+                      if (!ok) return
                       await api.admin.deleteInvite(inv.code)
                       toast('已删除')
                       load()
