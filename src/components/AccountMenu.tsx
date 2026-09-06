@@ -108,7 +108,7 @@ export function AccountMenu() {
             }}
             count={(data.notes ?? []).length}
           >
-            便签
+            便签随记
           </MenuItem>
           <MenuItem
             onClick={() => {

@@ -126,7 +126,7 @@ export function NotesModal({ open, onClose }: { open: boolean; onClose: () => vo
   return (
     <Modal
       open={open}
-      title="便签"
+      title="便签随记"
       onClose={handleClose}
       width="max-w-3xl"
       icon={
