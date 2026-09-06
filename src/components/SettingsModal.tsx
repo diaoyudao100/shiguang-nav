@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { useTheme } from '../hooks/useTheme'
 import { useAuth } from '../hooks/useAuth'
@@ -78,6 +78,18 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
   const [codeInput, setCodeInput] = useState('')
   const [tokenDuration, setTokenDuration] = useState('365')
   const [tokenLoading, setTokenLoading] = useState(false)
+  const bgUploadRowRef = useRef<HTMLDivElement>(null)
+  const prevBgEnabled = useRef(form.bgImageEnabled)
+
+  // 打开「启用背景图」时，新出现的上传栏自动滚入视野，避免藏在滚动区底部看不见
+  useEffect(() => {
+    if (!prevBgEnabled.current && form.bgImageEnabled) {
+      requestAnimationFrame(() =>
+        bgUploadRowRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }),
+      )
+    }
+    prevBgEnabled.current = form.bgImageEnabled
+  }, [form.bgImageEnabled])
 
   const letter = (form.siteTitle || '拾光导航').trim().charAt(0) || '拾'
   const regenIcons = () => {
@@ -309,9 +321,21 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
     : '长期有效'
 
   return (
-    <Modal open={open} title="设置" onClose={onClose} width="max-w-[560px]">
+    <Modal
+      open={open}
+      title="设置"
+      onClose={onClose}
+      width="max-w-[560px]"
+      footer={
+        tab !== 'data' ? (
+          <button onClick={save} className="btn-primary h-11 w-full">
+            保存设置
+          </button>
+        ) : undefined
+      }
+    >
       {/* 标签页：一行最多容纳 6 个，超出自动换行 */}
-      <div className="mb-5 flex gap-1 rounded-[14px] border border-line bg-base/50 p-1 shadow-sm">
+      <div className="mb-4 flex gap-1 rounded-[14px] border border-line bg-base/50 p-1 shadow-sm">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -634,7 +658,7 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
       )}
 
       {tab === 'appearance' && (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3.5">
           {/* 主题模式 */}
           <Field label="主题模式">
             <select className={inputCls} value={form.theme} onChange={(e) => applyTheme(e.target.value as ThemeMode)}>
@@ -712,13 +736,13 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
                   <button
                     key={b.id}
                     type="button"
-                    onClick={() => applyBg(b.id)}
-                    className={`rounded-xl border p-2.5 text-center transition-all hover:-translate-y-0.5 ${
-                      active ? 'border-accent/60 bg-accent-soft/40 shadow-sm' : 'border-line bg-surface'
-                    }`}
-                  >
-                    <div className="h-14 rounded-lg" style={{ background: b.preview }} />
-                    <div className="mt-2 text-xs font-medium">{b.name}</div>
+                onClick={() => applyBg(b.id)}
+                className={`rounded-xl border p-2 text-center transition-all hover:-translate-y-0.5 ${
+                  active ? 'border-accent/60 bg-accent-soft/40 shadow-sm' : 'border-line bg-surface'
+                }`}
+              >
+                <div className="h-11 rounded-lg" style={{ background: b.preview }} />
+                <div className="mt-1.5 text-xs font-medium">{b.name}</div>
                     <div className="mt-0.5 text-[10px] text-ink2">{b.desc}</div>
                   </button>
                 )
@@ -797,7 +821,7 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
               </button>
             </div>
             {form.bgImageEnabled && (
-              <div className="mt-2.5 flex gap-2">
+              <div ref={bgUploadRowRef} className="mt-2.5 flex gap-2">
                 <input
                   className={inputCls + ' min-w-0 flex-1 font-mono text-xs'}
                   value={form.bgImage.startsWith('data:') ? '（已使用本地上传的图片）' : form.bgImage}
@@ -994,12 +1018,7 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
         </div>
       )}
 
-      {/* 保存 */}
-      {tab !== 'data' && (
-        <button onClick={save} className="btn-primary mt-6 h-11 w-full">
-          保存设置
-        </button>
-      )}
+      {/* 保存按钮已移入弹窗底部固定栏，任何内容高度下都保持可见 */}
     </Modal>
   )
 }

@@ -12,6 +12,8 @@ interface ModalProps {
   headerExtra?: ReactNode
   /** 标题左侧的自定义图标（不传用主题色光点） */
   icon?: ReactNode
+  /** 底部固定操作栏（不随内容滚动，始终可见），如「保存设置」 */
+  footer?: ReactNode
   /** 弹窗之上还会叠一层选择器时，关掉本层的 Esc 关闭，让 Esc 只关最上层 */
   closeOnEsc?: boolean
 }
@@ -24,6 +26,7 @@ export function Modal({
   width = 'max-w-lg',
   headerExtra,
   icon,
+  footer,
   closeOnEsc = true,
 }: ModalProps) {
   const { data } = useStore()
@@ -94,7 +97,10 @@ export function Modal({
         </div>
         <div className="border-t border-line" />
         {/* min-h-0：flex 子项默认 min-height 为内容高度，缺了它内容超高时不会滚动而是被硬裁 */}
-        <div className="min-h-0 overflow-y-auto px-5 py-5">{children}</div>
+        <div className={`min-h-0 overflow-y-auto px-5 ${footer ? 'pb-3 pt-5' : 'py-5'}`}>{children}</div>
+        {footer && (
+          <div className="shrink-0 border-t border-line px-5 py-3.5">{footer}</div>
+        )}
       </div>
     </div>,
     document.body,
