@@ -73,7 +73,7 @@ function Shell() {
           mobileOpen={sidebarOpen}
           onCloseMobile={() => setSidebarOpen(false)}
         />
-        <main className="min-w-0 flex-1 px-5 pb-6 pt-6 md:px-7">
+        <main className="min-w-0 flex-1 px-5 pb-6 pt-6 md:px-7 md:pt-3.5">
           {/* 移动端：顶栏不放搜索，正文顶部保留 */}
           <div className="mb-7 md:hidden">
             <SearchBar scope={scope} setScope={setScope} query={query} setQuery={setQuery} />
@@ -127,7 +127,7 @@ function Shell() {
               </a>
             </div>
             <p className="mt-4 text-center text-[11px] tracking-wide text-ink2/50">
-              {data.settings.siteTitle?.trim() || '拾光导航'} · v2.3.3 · 本地优先，数据尽在掌控
+              {data.settings.siteTitle?.trim() || '拾光导航'} · v2.3.4 · 本地优先，数据尽在掌控
             </p>
           </footer>
         </main>

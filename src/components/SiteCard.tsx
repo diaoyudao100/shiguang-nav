@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Site } from '../types'
+import { useStore } from '../hooks/useStore'
 import { avatarColor, faviconUrl } from '../lib/favicon'
 import { IconPin, IconSettings } from './icons'
 
@@ -76,6 +77,8 @@ export function SiteCard({
   onDropCard,
   onEdit,
 }: CardProps) {
+  const { data } = useStore()
+  const showUrl = data.settings.showSiteUrl !== false
   return (
     <div
       draggable
@@ -109,14 +112,16 @@ export function SiteCard({
             </a>
             {site.pinned && <IconPin width={11} height={11} className="shrink-0 text-accent" />}
           </div>
-          <div className="mt-0.5 flex items-center gap-1.5 truncate text-xs leading-5 text-ink2/85" title={site.url}>
-            {categoryChip && (
-              <span className="shrink-0 rounded-full bg-accent-soft px-1.5 py-px text-[11px] font-normal text-accent">
-                {categoryChip}
-              </span>
-            )}
-            <span className="truncate">{hostOf(site.url)}</span>
-          </div>
+          {showUrl && (
+            <div className="mt-0.5 flex items-center gap-1.5 truncate text-xs leading-5 text-ink2/85" title={site.url}>
+              {categoryChip && (
+                <span className="shrink-0 rounded-full bg-accent-soft px-1.5 py-px text-[11px] font-normal text-accent">
+                  {categoryChip}
+                </span>
+              )}
+              <span className="truncate">{hostOf(site.url)}</span>
+            </div>
+          )}
         </div>
       </div>
 

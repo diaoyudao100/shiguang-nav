@@ -17,6 +17,7 @@ export const DEFAULT_SETTINGS: Settings = {
   siteTitle: '拾光导航',
   favicon: '',
   maskClosable: true,
+  showSiteUrl: true,
   searchEngine: 'bing',
   greetingName: '拾光',
   aiProvider: 'openai',
@@ -157,6 +158,7 @@ export function migrate(data: Partial<NavData>): NavData {
   settings.theme = (['light', 'dark', 'system'] as ThemeMode[]).includes(settings.theme)
     ? settings.theme
     : 'system'
+  settings.showSiteUrl = settings.showSiteUrl !== false
   const notes: Note[] = Array.isArray(data.notes)
     ? data.notes
         .filter((n) => n && typeof n.text === 'string')

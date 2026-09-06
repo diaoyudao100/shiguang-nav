@@ -152,6 +152,7 @@ function defaultSettings(): Settings {
     siteTitle: '拾光导航',
     favicon: '',
     maskClosable: true,
+    showSiteUrl: true,
     searchEngine: 'bing',
     greetingName: '拾光',
     aiProvider: 'openai',

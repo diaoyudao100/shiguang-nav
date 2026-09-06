@@ -62,7 +62,7 @@ export function Modal({
                 className="h-2 w-2 shrink-0 rounded-full bg-gradient-to-br from-[var(--c-accent)] to-[var(--c-accent2)] shadow-[0_0_8px_color-mix(in_srgb,var(--c-accent)_60%,transparent)]"
               />
             )}
-            <h2 className="text-base font-semibold tracking-tight">{title}</h2>
+            <h2 className="text-base font-semibold tracking-tight text-ink">{title}</h2>
             {headerExtra}
           </div>
           <button

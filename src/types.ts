@@ -39,6 +39,7 @@ export interface Settings {
   siteTitle: string // 网页标题（浏览器标签 + 站点名）
   favicon: string // 站点图标（data URL / http URL），空 = 内置默认
   maskClosable: boolean // 点击遮罩关闭弹窗
+  showSiteUrl: boolean // 网址卡片是否显示网站网址（关闭时仅显示名称并垂直居中）
   searchEngine: string
   greetingName: string
   aiProvider: AiProvider

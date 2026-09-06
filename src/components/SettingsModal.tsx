@@ -435,6 +435,32 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
             </select>
           </Field>
 
+          {/* 网址卡片显示 */}
+          <div className="flex items-center justify-between rounded-xl border border-line bg-base px-4 py-3">
+            <div>
+              <div className="text-sm font-medium">显示网站网址</div>
+              <div className="mt-0.5 text-xs text-ink2">关闭后卡片仅显示网站名称并垂直居中</div>
+            </div>
+            <button
+              type="button"
+              aria-label="显示网站网址"
+              onClick={() => {
+                const v = !form.showSiteUrl
+                setForm((f) => ({ ...f, showSiteUrl: v }))
+                setSettings({ showSiteUrl: v })
+              }}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                form.showSiteUrl !== false ? 'bg-accent' : 'bg-line'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                  form.showSiteUrl !== false ? 'left-[22px]' : 'left-0.5'
+                }`}
+              />
+            </button>
+          </div>
+
           {/* 弹窗交互 */}
           <div className="border-t border-line pt-4">
             <span className="mb-2 block text-xs font-semibold text-ink">弹窗交互</span>
@@ -891,7 +917,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
               />
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{form.siteTitle || '拾光导航'}</div>
-                <div className="mt-0.5 text-xs text-ink2">v2.3.3 · 个人网址导航</div>
+                <div className="mt-0.5 text-xs text-ink2">v2.3.4 · 个人网址导航</div>
               </div>
               <a
                 href="https://github.com/diaoyudao100/shiguang-nav"
