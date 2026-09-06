@@ -93,15 +93,18 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
         autoIcon: !site.iconUrl,
       })
     } else {
-      const wanted =
-        (defaultCategoryId && data.categories.find((c) => c.id === defaultCategoryId)?.name) ||
-        presetCategoryName ||
+      // 预设分类必须解析成真实分类 id：外层传的是 id，旧的按名称预设入口在这里兜底转换。
+      // 若把分类名直接存进 categoryId，站点会落进不存在的分类，页面上任何区块都不渲染，
+      // 表现为「点保存链接没反应/添加不了」。
+      const wantedId =
+        (defaultCategoryId && data.categories.some((c) => c.id === defaultCategoryId) && defaultCategoryId) ||
+        data.categories.find((c) => c.name === presetCategoryName)?.id ||
         ''
       setForm({
         name: '',
         url: '',
         desc: '',
-        categoryId: wanted,
+        categoryId: wantedId,
         pinned: false,
         hidden: false,
         iconUrl: '',
@@ -124,7 +127,8 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
     }
     const name = form.name.trim() || hostOf(url)
     let categoryId = form.categoryId.trim()
-    if (!categoryId) categoryId = data.categories[0]?.id ?? ''
+    // 兜底：分类被删或历史表单值非法时归入第一个分类，绝不让站点落到渲染不出来的悬空分类
+    if (!data.categories.some((c) => c.id === categoryId)) categoryId = data.categories[0]?.id ?? ''
     const payload = {
       name,
       url,
@@ -177,7 +181,8 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
       setError('请粘贴至少一行链接')
       return
     }
-    let categoryId = form.categoryId.trim() || data.categories[0]?.id || ''
+    let categoryId = form.categoryId.trim()
+    if (!data.categories.some((c) => c.id === categoryId)) categoryId = data.categories[0]?.id ?? ''
     const existing = new Set(data.sites.map((s) => normalizeUrl(s.url).replace(/\/+$/, '')))
     let added = 0
     let skipped = 0

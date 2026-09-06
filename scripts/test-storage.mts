@@ -59,7 +59,27 @@ const now = Date.now()
   assert.equal(b.settings.showSiteUrl, true)
 }
 
-// 7. defaultData 完整性
+// 7. 站点分类 id 修复：分类名 → 重映射为 id；未知分类 → 第一个分类；合法 id → 原样保留
+{
+  const d = migrate({
+    categories: [
+      { id: 'c-often', name: '常用推荐' },
+      { id: 'c-ai', name: '人工智能' },
+    ],
+    sites: [
+      { url: 'https://a.com', categoryId: '人工智能' }, // 名称（历史 bug）
+      { url: 'https://b.com', categoryId: 'c-ai' }, // 合法 id
+      { url: 'https://c.com', categoryId: 'ghost-cat' }, // 完全未知
+      { url: 'https://d.com', categoryId: '' }, // 空
+    ],
+  })
+  assert.equal(d.sites[0].categoryId, 'c-ai')
+  assert.equal(d.sites[1].categoryId, 'c-ai')
+  assert.equal(d.sites[2].categoryId, 'c-often')
+  assert.equal(d.sites[3].categoryId, 'c-often')
+}
+
+// 8. defaultData 完整性
 {
   const d = defaultData()
   assert.ok(Array.isArray(d.notes) && d.notes.length === 0)

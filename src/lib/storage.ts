@@ -140,6 +140,16 @@ export function migrate(data: Partial<NavData>): NavData {
           icon: typeof c.icon === 'string' ? c.icon : (CAT_ICON_SUGGEST[c.name.trim()] ?? ''),
         }))
     : base.categories
+  // 分类 id 合法性修复：历史版本曾把「分类名」当成 categoryId 存进站点（站点会落到
+  // 不存在的分类下，页面上任何区块都不渲染）。这里把名称重新映射回 id，
+  // 完全未知的分类归入第一个分类，保证每个站点都可见。
+  const catIds = new Set(categories.map((c) => c.id))
+  const catIdByName = new Map(categories.map((c) => [c.name.trim(), c.id]))
+  const fixCategoryId = (raw: string | undefined): string => {
+    if (raw && catIds.has(raw)) return raw
+    const byName = raw ? catIdByName.get(raw.trim()) : undefined
+    return byName || categories[0]?.id || 'c-often'
+  }
   const sites = Array.isArray(data.sites)
     ? data.sites
         .filter((s: Site) => s && typeof s.url === 'string')
@@ -148,7 +158,7 @@ export function migrate(data: Partial<NavData>): NavData {
           name: s.name || s.url || '未命名',
           url: s.url!,
           desc: s.desc || '',
-          categoryId: s.categoryId || categories[0]?.id || 'c-often',
+          categoryId: fixCategoryId(s.categoryId),
           pinned: !!s.pinned,
           hidden: !!s.hidden,
           iconUrl: s.iconUrl || '',
