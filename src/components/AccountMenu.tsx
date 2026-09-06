@@ -5,6 +5,7 @@ import { useStore } from '../hooks/useStore'
 import { navigate } from '../lib/router'
 import { Field, Modal, inputCls } from './Modal'
 import { NotesModal } from './NotesModal'
+import { OnboardingModal } from './OnboardingCard'
 import { useToast } from './Toast'
 
 export function AccountMenu() {
@@ -14,8 +15,27 @@ export function AccountMenu() {
   const [open, setOpen] = useState(false)
   const [nameModal, setNameModal] = useState(false)
   const [notesOpen, setNotesOpen] = useState(false)
+  const [onboardingOpen, setOnboardingOpen] = useState(false)
+  const [pwdModal, setPwdModal] = useState(false)
+  const [pwdForm, setPwdForm] = useState({ old: '', next: '', confirm: '' })
+  const [pwdError, setPwdError] = useState('')
+  const [pwdLoading, setPwdLoading] = useState(false)
+  const [pendingNoteId, setPendingNoteId] = useState<string | null>(null)
   const [name, setName] = useState('')
   const ref = useRef<HTMLDivElement>(null)
+
+  // 站内搜索点击便签结果 → 打开对应便签
+  useEffect(() => {
+    const onOpenNote = (e: Event) => {
+      const id = (e as CustomEvent<string>).detail
+      if (!id) return
+      setOpen(false)
+      setPendingNoteId(id)
+      setNotesOpen(true)
+    }
+    window.addEventListener('shiguang:open-note', onOpenNote)
+    return () => window.removeEventListener('shiguang:open-note', onOpenNote)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -61,6 +81,23 @@ export function AccountMenu() {
       refresh()
     } catch (e) {
       toast((e as Error).message)
+    }
+  }
+
+  const changePassword = async () => {
+    setPwdError('')
+    if (pwdForm.next.length < 8) return setPwdError('新密码至少 8 位')
+    if (pwdForm.next !== pwdForm.confirm) return setPwdError('两次输入的新密码不一致')
+    setPwdLoading(true)
+    try {
+      await api.changePassword({ oldPassword: pwdForm.old, newPassword: pwdForm.next })
+      setPwdModal(false)
+      setPwdForm({ old: '', next: '', confirm: '' })
+      toast('密码已修改')
+    } catch (e) {
+      setPwdError((e as Error).message)
+    } finally {
+      setPwdLoading(false)
     }
   }
 
@@ -112,12 +149,30 @@ export function AccountMenu() {
           </MenuItem>
           <MenuItem
             onClick={() => {
+              setOpen(false)
+              setOnboardingOpen(true)
+            }}
+          >
+            快速上手
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
               setName(user.name)
               setOpen(false)
               setNameModal(true)
             }}
           >
             修改昵称
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              setPwdForm({ old: '', next: '', confirm: '' })
+              setPwdError('')
+              setOpen(false)
+              setPwdModal(true)
+            }}
+          >
+            修改密码
           </MenuItem>
           <MenuItem onClick={logout}>退出登录</MenuItem>
         </div>
@@ -144,7 +199,57 @@ export function AccountMenu() {
         </form>
       </Modal>
 
-      <NotesModal open={notesOpen} onClose={() => setNotesOpen(false)} />
+      <NotesModal open={notesOpen} onClose={() => setNotesOpen(false)} initialId={pendingNoteId} />
+
+      <OnboardingModal open={onboardingOpen} onClose={() => setOnboardingOpen(false)} />
+
+      <Modal open={pwdModal} title="修改密码" onClose={() => setPwdModal(false)} width="max-w-xs">
+        <form
+          className="flex flex-col gap-3.5"
+          onSubmit={(e) => {
+            e.preventDefault()
+            changePassword()
+          }}
+        >
+          <Field label="当前密码">
+            <input
+              type="password"
+              autoFocus
+              autoComplete="current-password"
+              className={inputCls}
+              value={pwdForm.old}
+              onChange={(e) => setPwdForm({ ...pwdForm, old: e.target.value })}
+            />
+          </Field>
+          <Field label="新密码" hint="至少 8 位">
+            <input
+              type="password"
+              autoComplete="new-password"
+              className={inputCls}
+              value={pwdForm.next}
+              onChange={(e) => setPwdForm({ ...pwdForm, next: e.target.value })}
+            />
+          </Field>
+          <Field label="确认新密码">
+            <input
+              type="password"
+              autoComplete="new-password"
+              className={inputCls}
+              value={pwdForm.confirm}
+              onChange={(e) => setPwdForm({ ...pwdForm, confirm: e.target.value })}
+            />
+          </Field>
+          {pwdError && <p className="text-xs text-danger">{pwdError}</p>}
+          <div className="mt-1 flex justify-end gap-2">
+            <button type="button" onClick={() => setPwdModal(false)} className="rounded-lg px-4 py-2 text-sm text-ink2 hover:text-ink">
+              取消
+            </button>
+            <button type="submit" className="btn-primary" disabled={pwdLoading}>
+              {pwdLoading ? '提交中…' : '修改密码'}
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   )
 }

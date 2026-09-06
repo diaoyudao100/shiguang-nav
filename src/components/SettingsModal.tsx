@@ -12,7 +12,7 @@ import { aiListModels, aiTestConnection, aiDescribeSite } from '../lib/ai'
 import type { Settings, ThemeMode } from '../types'
 import { IconBot, IconDatabase, IconDownload, IconGlobe, IconKey, IconPalette, IconSparkles } from './icons'
 
-type Tab = 'site' | 'ai' | 'appearance' | 'data'
+export type Tab = 'site' | 'ai' | 'appearance' | 'data'
 
 const TABS = [
   { id: 'site', label: '网站设置', icon: IconGlobe },
@@ -46,9 +46,11 @@ interface SettingsModalProps {
   open: boolean
   onClose: () => void
   onOpenData: () => void
+  /** 打开时直接定位到的标签页（如引导卡的「配置 AI」） */
+  initialTab?: Tab | null
 }
 
-export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps) {
+export function SettingsModal({ open, onClose, onOpenData, initialTab }: SettingsModalProps) {
   const { data, setSettings, updateSite, resetAll } = useStore()
   const { setMode } = useTheme()
   const { user } = useAuth()
@@ -159,7 +161,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
     setForm({ ...data.settings })
     setTestResult(null)
     setModels({ loading: false, list: [], open: false })
-    setTab('site')
+    setTab(initialTab ?? 'site')
   } else if (!open && wasOpen) {
     setWasOpen(false)
   }
@@ -463,7 +465,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
 
           {/* 弹窗交互 */}
           <div className="border-t border-line pt-4">
-            <span className="mb-2 block text-xs font-semibold text-ink">弹窗交互</span>
+            <span className="mb-1.5 block text-xs font-medium text-ink2">弹窗交互</span>
             <div className="flex items-center justify-between rounded-xl border border-line bg-base px-4 py-3">
               <div>
                 <div className="text-sm font-medium">点击遮罩关闭弹窗</div>
@@ -614,7 +616,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
 
           {/* 批量操作 */}
           <div className="border-t border-line pt-4">
-            <p className="mb-2.5 text-xs font-semibold text-ink">批量操作</p>
+            <p className="mb-1.5 text-xs font-medium text-ink2">批量操作</p>
             <button
               onClick={runBatch}
               disabled={batch.running}
@@ -632,7 +634,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
       )}
 
       {tab === 'appearance' && (
-        <div className="flex flex-col gap-5">
+        <div className="flex flex-col gap-4">
           {/* 主题模式 */}
           <Field label="主题模式">
             <select className={inputCls} value={form.theme} onChange={(e) => applyTheme(e.target.value as ThemeMode)}>
@@ -722,6 +724,53 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
                 )
               })}
             </div>
+          </div>
+
+          {/* 网格密度 */}
+          <Field label="网格密度" hint="桌面端一行卡片数">
+            <div className="flex gap-1 rounded-[10px] border border-line bg-base/60 p-1">
+              {(['4', '6', '8'] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => {
+                    setForm((f) => ({ ...f, gridDensity: d }))
+                    setSettings({ gridDensity: d })
+                  }}
+                  className={`h-8 flex-1 rounded-[7px] text-xs font-medium transition-all ${
+                    (form.gridDensity || '6') === d ? 'bg-surface text-ink shadow-sm' : 'text-ink2 hover:text-ink'
+                  }`}
+                >
+                  {d} 列
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          {/* 智能常用 */}
+          <div className="flex items-center justify-between rounded-xl border border-line bg-base px-4 py-3">
+            <div>
+              <div className="text-sm font-medium">智能常用</div>
+              <div className="mt-0.5 text-xs text-ink2">置顶区自动加入点击最多的站点（点击数据仅保存在本机）</div>
+            </div>
+            <button
+              type="button"
+              aria-label="智能常用"
+              onClick={() => {
+                const v = !form.autoCommon
+                setForm((f) => ({ ...f, autoCommon: v }))
+                setSettings({ autoCommon: v })
+              }}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                form.autoCommon ? 'bg-accent' : 'bg-line'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                  form.autoCommon ? 'left-[22px]' : 'left-0.5'
+                }`}
+              />
+            </button>
           </div>
 
           {/* 自定义背景 */}
@@ -917,7 +966,7 @@ export function SettingsModal({ open, onClose, onOpenData }: SettingsModalProps)
               />
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{form.siteTitle || '拾光导航'}</div>
-                <div className="mt-0.5 text-xs text-ink2">v2.3.5 · 个人网址导航</div>
+                <div className="mt-0.5 text-xs text-ink2">v2.4.0 · 个人网址导航</div>
               </div>
               <a
                 href="https://github.com/diaoyudao100/shiguang-nav"

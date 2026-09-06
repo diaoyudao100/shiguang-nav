@@ -49,6 +49,8 @@ export const api = {
     req<{ user: AuthUser }>('POST', '/api/auth/complete', p),
   me: () => req<{ user: AuthUser | null; dataUpdatedAt: number | null }>('GET', '/api/me'),
   updateName: (name: string) => req<{ user: AuthUser }>('PUT', '/api/me', { name }),
+  changePassword: (p: { oldPassword: string; newPassword: string }) =>
+    req<{ ok: true }>('POST', '/api/auth/password', p),
   getData: () => req<{ data: NavData | null; updatedAt: number | null }>('GET', '/api/data'),
   putData: (data: NavData) => req<{ updatedAt: number }>('PUT', '/api/data', { data }),
   /** 浏览器扩展连接码（自定义 code 或留空随机；durationDays 天数，0 = 长期，生成即覆盖旧码）

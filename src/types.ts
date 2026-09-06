@@ -40,8 +40,10 @@ export interface Settings {
   favicon: string // 站点图标（data URL / http URL），空 = 内置默认
   maskClosable: boolean // 点击遮罩关闭弹窗
   showSiteUrl: boolean // 网址卡片是否显示网站网址（关闭时仅显示名称并垂直居中）
+  gridDensity: '4' | '6' | '8' // 桌面端一行卡片数
+  sidebarCollapsed: boolean // 桌面端分类目录折叠为图标条
+  autoCommon: boolean // 智能常用：置顶区自动追加点击频率最高的站点（点击数据仅存本机）
   searchEngine: string
-  greetingName: string
   aiProvider: AiProvider
   aiBaseURL: string
   aiKey: string
@@ -56,11 +58,18 @@ export interface Note {
   updatedAt: number
 }
 
+export interface TrashItem {
+  kind: 'site' | 'category'
+  data: Site | Category
+  deletedAt: number
+}
+
 export interface NavData {
   version: number
   categories: Category[]
   sites: Site[]
   notes: Note[]
+  trash?: TrashItem[] // 最近删除：保留 30 天，可恢复
   settings: Settings
 }
 

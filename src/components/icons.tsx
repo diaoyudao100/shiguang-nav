@@ -239,3 +239,13 @@ export const IconStickyNote = (p: P) => (
     <path d="M14 3v4a2 2 0 0 0 2 2h4" />
   </svg>
 )
+export const IconChevronLeft = (p: P) => (
+  <svg {...base(p)}>
+    <path d="m15 18-6-6 6-6" />
+  </svg>
+)
+export const IconChevronRight = (p: P) => (
+  <svg {...base(p)}>
+    <path d="m9 18 6-6-6-6" />
+  </svg>
+)

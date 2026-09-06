@@ -1,4 +1,4 @@
-import type { Category, NavData, Note, Settings, Site, ThemeMode } from '../types'
+import type { Category, NavData, Note, Settings, Site, ThemeMode, TrashItem } from '../types'
 
 /**
  * 存储键升级为 v2：与旧版标签页（仍在读写 v1 的旧代码）完全隔离，
@@ -18,8 +18,10 @@ export const DEFAULT_SETTINGS: Settings = {
   favicon: '',
   maskClosable: true,
   showSiteUrl: true,
+  gridDensity: '6',
+  sidebarCollapsed: false,
+  autoCommon: false,
   searchEngine: 'bing',
-  greetingName: '拾光',
   aiProvider: 'openai',
   aiBaseURL: '',
   aiKey: '',
@@ -91,6 +93,7 @@ export function defaultData(): NavData {
     categories: SEED_CATEGORIES,
     sites: seedSites(),
     notes: [],
+    trash: [],
     settings: { ...DEFAULT_SETTINGS },
   }
 }
@@ -159,6 +162,11 @@ export function migrate(data: Partial<NavData>): NavData {
     ? settings.theme
     : 'system'
   settings.showSiteUrl = settings.showSiteUrl !== false
+  settings.gridDensity = (['4', '6', '8'] as const).includes(settings.gridDensity as '4' | '6' | '8')
+    ? settings.gridDensity
+    : '6'
+  settings.sidebarCollapsed = !!settings.sidebarCollapsed
+  settings.autoCommon = !!settings.autoCommon
   const notes: Note[] = Array.isArray(data.notes)
     ? data.notes
         .filter((n) => n && typeof n.text === 'string')
@@ -170,5 +178,20 @@ export function migrate(data: Partial<NavData>): NavData {
           updatedAt: n.updatedAt || Date.now(),
         }))
     : []
-  return { version: 1, categories, sites, settings, notes }
+  // 回收站：结构修补 + 30 天自动过期
+  const TRASH_TTL = 30 * 86400_000
+  const trash: TrashItem[] = Array.isArray(data.trash)
+    ? data.trash
+        .filter(
+          (t: Partial<TrashItem>) =>
+            (t.kind === 'site' || t.kind === 'category') && t.data && typeof t.data === 'object',
+        )
+        .map((t: Partial<TrashItem>) => ({
+          kind: t.kind as 'site' | 'category',
+          data: t.data as Site | Category,
+          deletedAt: t.deletedAt || Date.now(),
+        }))
+        .filter((t) => Date.now() - t.deletedAt < TRASH_TTL)
+    : []
+  return { version: 1, categories, sites, settings, notes, trash }
 }

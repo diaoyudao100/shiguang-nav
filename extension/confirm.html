@@ -33,6 +33,12 @@
       input:focus, textarea:focus, select:focus { border-color: #5b5ce2; }
       textarea { resize: none; height: 56px; }
       .hint { font-size: 11px; color: #71717a; margin-top: 4px; min-height: 16px; }
+      .cat-row { display: flex; align-items: center; justify-content: space-between; }
+      .lastcat {
+        height: auto; padding: 0; border: none; background: none;
+        font-size: 11px; color: #5b5ce2; cursor: pointer;
+      }
+      .lastcat:hover { text-decoration: underline; }
       .pin-row {
         display: flex; align-items: center; gap: 8px;
         margin-top: 12px; cursor: pointer; user-select: none;
@@ -93,7 +99,10 @@
       <label for="name">网站名称</label>
       <input type="text" id="name" maxlength="60" />
 
-      <label for="category">分类</label>
+      <div class="cat-row">
+        <label for="category">分类</label>
+        <button id="lastCatBtn" type="button" class="lastcat" hidden></button>
+      </div>
       <select id="category"><option value="">加载中…</option></select>
       <div class="hint" id="hint"><span class="spin">⟳</span> 正在读取分类并请求 AI 推荐…</div>
 

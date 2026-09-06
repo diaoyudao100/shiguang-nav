@@ -69,8 +69,10 @@ async function init() {
 async function load() {
   const cats = await api('/api/categories')
   if (cats.status === 401 || cats.status === 403) return needConnect()
+  const { lastCategoryId = '' } = await chrome.storage.local.get({ lastCategoryId: '' })
   if (cats.status === 200 && Array.isArray(cats.data.categories)) {
     fillSelect(cats.data.categories, undefined)
+    updateLastCatBtn(cats.data.categories, lastCategoryId)
   } else {
     setHint('分类列表加载失败，仍可直接收藏（归入第一个分类）', 'err')
   }
@@ -83,14 +85,29 @@ async function load() {
   if (sug.status === 200) {
     const { desc, descSource, categoryId, category } = sug.data
     if (desc && !userTouchedDesc) $('desc').value = desc
-    fillSelect(cats.status === 200 ? cats.data.categories : [], categoryId)
+    fillSelect(cats.status === 200 ? cats.data.categories : [], categoryId || lastCategoryId)
     if (descSource === 'ai' && category) {
       setHint(`AI 推荐分类：${category}${desc ? '，简介已生成' : ''}`, 'ok')
     } else {
       setHint('AI 未返回推荐（未配置或调用失败），可手动选择分类')
     }
+    updateLastCatBtn(cats.status === 200 ? cats.data.categories : [], lastCategoryId)
   } else {
     setHint('AI 推荐失败，可手动选择分类后收藏', 'err')
+  }
+}
+
+/** 「上次分类」快捷按钮：显示在上次使用的分类 != 当前选择时 */
+let lastCategoryId = ''
+function updateLastCatBtn(categories, lastId) {
+  const btn = $('lastCatBtn')
+  if (!btn) return
+  const last = categories.find((c) => c.id === lastId)
+  if (last && last.id !== $('category').value) {
+    btn.textContent = `↩ 上次：${last.name}`
+    btn.hidden = false
+  } else {
+    btn.hidden = true
   }
 }
 
@@ -108,6 +125,12 @@ $('settingsBtn').addEventListener('click', () => {
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') window.close()
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) $('saveBtn').click()
+})
+$('lastCatBtn').addEventListener('click', () => {
+  if (lastCategoryId) {
+    $('category').value = lastCategoryId
+    userTouchedCategory = true
+  }
 })
 $('openOptionsBtn').addEventListener('click', () => {
   chrome.tabs.create({ active: true, url: chrome.runtime.getURL('options.html') })
@@ -132,6 +155,7 @@ $('saveBtn').addEventListener('click', async () => {
     if (data.duplicate) {
       showDone(`「${data.site?.name || ''}」已在导航站中，未重复添加`)
     } else {
+      chrome.storage.local.set({ lastCategoryId: $('category').value })
       showDone(`已收藏${data.category ? `到「${data.category}」` : ''}`)
     }
     return

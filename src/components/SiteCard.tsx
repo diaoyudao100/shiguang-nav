@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import type { Site } from '../types'
 import { useStore } from '../hooks/useStore'
-import { avatarColor, faviconUrl } from '../lib/favicon'
+import { avatarColor } from '../lib/favicon'
+import { recordClick } from '../lib/clicks'
 import { IconPin, IconSettings } from './icons'
 
 function Highlight({ text, query }: { text: string; query: string }) {
@@ -17,13 +18,20 @@ function Highlight({ text, query }: { text: string; query: string }) {
   )
 }
 
-/** 图标底座：自定义图标 > 自动获取 > 首字母渐变头像 */
+/** 图标底座：自定义图标 > Google S2 > 备用源 favicon.im > 首字母渐变头像 */
 export function Favicon({ site }: { site: Site }) {
-  const [failed, setFailed] = useState(false)
+  const [failed, setFailed] = useState(0) // 0=正常 1=Google 失败 2=备用源也失败
   const custom = site.iconUrl?.trim()
-  const url = custom || faviconUrl(site.url)
+  const host = (() => {
+    try {
+      return new URL(site.url).hostname
+    } catch {
+      return ''
+    }
+  })()
+  const sources = custom ? [custom] : host ? [`https://www.google.com/s2/favicons?domain=${host}&sz=64`, `https://favicon.im/${host}?larger=true`] : []
   const color = site.iconColor?.trim() || avatarColor(site.name)
-  if (failed || !url) {
+  if (failed >= sources.length || !sources.length) {
     return (
       <div
         className="icon-tile text-base font-semibold text-white"
@@ -38,12 +46,12 @@ export function Favicon({ site }: { site: Site }) {
   return (
     <div className="icon-tile">
       <img
-        src={url}
+        src={sources[failed]}
         alt=""
         width={24}
         height={24}
         loading="lazy"
-        onError={() => setFailed(true)}
+        onError={() => setFailed((i) => i + 1)}
         className="h-6 w-6 rounded-[7px] object-contain"
       />
     </div>
@@ -104,7 +112,10 @@ export function SiteCard({
               href={site.url}
               target="_blank"
               rel="noreferrer noopener"
-              onClick={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation()
+                recordClick(site.id)
+              }}
               className="truncate text-[15px] font-medium leading-6 transition-colors hover:text-accent"
               title={site.name}
             >
@@ -156,7 +167,10 @@ export function SiteCard({
           rel="noreferrer noopener"
           className="absolute inset-0"
           aria-label={`打开 ${site.name}`}
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation()
+            recordClick(site.id)
+          }}
         />
       )}
     </div>

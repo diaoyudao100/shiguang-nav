@@ -19,7 +19,7 @@ function useClock(): string {
 }
 
 function SyncChip() {
-  const { sync } = useStore()
+  const { sync, forceSync } = useStore()
   const { user } = useAuth()
   const time = sync.time
     ? new Date(sync.time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
@@ -39,10 +39,21 @@ function SyncChip() {
         ? 'bg-danger'
         : 'bg-emerald-400'
   return (
-    <span className="hidden h-10 items-center gap-1.5 rounded-full border border-line bg-surface/60 px-3 text-[11px] text-ink2 lg:flex">
+    <button
+      type="button"
+      onClick={() => user && forceSync()}
+      title={
+        sync.state === 'error'
+          ? `同步失败：${sync.errMsg ?? '网络异常'}，点击重试`
+          : user
+            ? '点击立即同步'
+            : '本地模式：登录后可云同步'
+      }
+      className="hidden h-10 items-center gap-1.5 rounded-full border border-line bg-surface/60 px-3 text-[11px] text-ink2 transition-colors hover:border-line-strong hover:text-ink lg:flex"
+    >
       <span className={`h-1.5 w-1.5 rounded-full ${dotColor}`} />
       {label}
-    </span>
+    </button>
   )
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { IconX } from './icons'
 import { useStore } from '../hooks/useStore'
@@ -27,10 +27,28 @@ export function Modal({
   closeOnEsc = true,
 }: ModalProps) {
   const { data } = useStore()
+  const dialogRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (closeOnEsc && e.key === 'Escape') onClose()
+      // 焦点圈禁：Tab 循环保持在弹窗内
+      if (e.key === 'Tab' && dialogRef.current) {
+        const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        )
+        if (focusables.length === 0) return
+        const first = focusables[0]
+        const last = focusables[focusables.length - 1]
+        const active = document.activeElement
+        if (e.shiftKey && (active === first || !dialogRef.current.contains(active))) {
+          e.preventDefault()
+          last.focus()
+        } else if (!e.shiftKey && active === last) {
+          e.preventDefault()
+          first.focus()
+        }
+      }
     }
     window.addEventListener('keydown', onKey)
     document.body.style.overflow = 'hidden'
@@ -50,7 +68,8 @@ export function Modal({
       }}
     >
       <div
-        className={`modal-card anim-pop flex max-h-[86vh] w-full flex-col overflow-hidden rounded-[22px] ${width}`}
+        ref={dialogRef}
+        className={`modal-card anim-pop flex max-h-[92vh] w-full flex-col overflow-hidden rounded-[22px] ${width}`}
         role="dialog"
         aria-modal="true"
       >

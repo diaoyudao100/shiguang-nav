@@ -153,8 +153,10 @@ function defaultSettings(): Settings {
     favicon: '',
     maskClosable: true,
     showSiteUrl: true,
+    gridDensity: '6',
+    sidebarCollapsed: false,
+    autoCommon: false,
     searchEngine: 'bing',
-    greetingName: '拾光',
     aiProvider: 'openai',
     aiBaseURL: '',
     aiKey: '',
@@ -432,4 +434,47 @@ export async function handleQuickAdd(req: Request, env: Env): Promise<Response> 
     .run()
   const category = data.categories.find((c) => c.id === categoryId)?.name ?? ''
   return json({ site, categoryId, category, descSource }, 200, corsHeaders(req))
+}
+
+/** POST /api/quick-note：扩展「保存选中文字到便签随记」（Bearer 连接码或会话认证） */
+export async function handleQuickNote(req: Request, env: Env): Promise<Response> {
+  if (req.method !== 'POST') return fail('方法不允许', 405)
+  const guard = originGuard(req)
+  if (guard) return guard
+  const user = await authAny(req, env)
+  if (!user) return fail('未连接：请先在导航站「设置 → 数据 → 浏览器扩展」生成连接码并填入扩展', 401)
+  const body = await readJson<{ text?: string; title?: string }>(req, 16_000)
+  const text = (body?.text ?? '').trim()
+  if (!text) return fail('没有可保存的内容')
+  const row = await env.DB
+    .prepare('SELECT data FROM user_data WHERE user_id = ?')
+    .bind(user.id)
+    .first<{ data: string }>()
+  let data: NavData
+  if (row) {
+    try {
+      data = JSON.parse(row.data) as NavData
+    } catch {
+      return fail('云端数据解析失败，请先在网页端打开一次导航站', 500)
+    }
+  } else {
+    data = freshData()
+  }
+  if (!Array.isArray(data.notes)) data.notes = []
+  const now = Date.now()
+  data.notes.push({
+    id: uid(),
+    title: (body?.title ?? '').trim().slice(0, 60) || text.replace(/\s+/g, ' ').slice(0, 30),
+    text: text.slice(0, 2000),
+    pinned: false,
+    updatedAt: now,
+  })
+  await env.DB
+    .prepare(
+      `INSERT INTO user_data (user_id, data, updated_at) VALUES (?, ?, ?)
+       ON CONFLICT(user_id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
+    )
+    .bind(user.id, JSON.stringify(data), now)
+    .run()
+  return json({ ok: true, total: data.notes.length }, 200, corsHeaders(req))
 }

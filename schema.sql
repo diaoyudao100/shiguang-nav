@@ -37,3 +37,11 @@ CREATE TABLE IF NOT EXISTS user_data (
   data       TEXT NOT NULL,                      -- 整份导航数据 JSON
   updated_at INTEGER NOT NULL
 );
+
+-- 登录限速：同 IP 连续失败 5 次锁 10 分钟（worker 内也会按需自建）
+CREATE TABLE IF NOT EXISTS login_attempts (
+  ip             TEXT PRIMARY KEY,
+  fails          INTEGER NOT NULL DEFAULT 0,
+  locked_until   INTEGER,
+  last_fail_at   INTEGER
+);

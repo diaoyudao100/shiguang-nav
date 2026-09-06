@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { navigate } from '../lib/router'
 import { useToast } from '../components/Toast'
 import { useConfirm } from '../components/Confirm'
-import { btnGhost, btnPrimary, inputCls } from '../components/Modal'
+import { btnGhost, btnPrimary, inputCls, Modal } from '../components/Modal'
 import { IconArrowUp, IconCopy, IconPlus, IconTrash } from '../components/icons'
 
 const PROVIDER_LABEL: Record<string, string> = {
@@ -29,6 +29,7 @@ export function AdminPage() {
   const confirm = useConfirm()
   const [overview, setOverview] = useState<AdminOverview | null>(null)
   const [error, setError] = useState('')
+  const [resetResult, setResetResult] = useState<{ name: string; temp: string } | null>(null)
   const [newCode, setNewCode] = useState('')
   const [creating, setCreating] = useState(false)
   const [expireDays, setExpireDays] = useState('7')
@@ -85,11 +86,30 @@ export function AdminPage() {
     }
   }
 
-  const resetPassword = async (id: string) => {
-    const pw = window.prompt('为该用户设置新密码（至少 8 位）：')
-    if (!pw) return
+  const genTemp = () => {
+    const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789'
+    const bytes = crypto.getRandomValues(new Uint8Array(10))
+    return [...bytes].map((b) => alphabet[b % alphabet.length]).join('') + 'Aa1'
+  }
+
+  const resetPassword = async (id: string, name: string) => {
+    const ok = await confirm({
+      danger: true,
+      title: '重置密码',
+      message: (
+        <>
+          确定重置 <span className="font-medium text-ink">{name}</span> 的密码吗？
+          <br />
+          将生成随机临时密码，请复制后告知对方。
+        </>
+      ),
+      okText: '重置',
+    })
+    if (!ok) return
     try {
-      await api.admin.resetPassword(id, pw)
+      const temp = genTemp()
+      await api.admin.resetPassword(id, temp)
+      setResetResult({ name, temp })
       toast('密码已重置')
     } catch (e) {
       toast((e as Error).message)
@@ -292,7 +312,7 @@ export function AdminPage() {
                   </>
                 )}
                 {u.email && (
-                  <button onClick={() => resetPassword(u.id)} className="btn-ghost !px-3 !py-1 text-xs">
+                  <button onClick={() => resetPassword(u.id, u.name)} className="btn-ghost !px-3 !py-1 text-xs">
                     重置密码
                   </button>
                 )}
@@ -303,6 +323,35 @@ export function AdminPage() {
       </section>
 
       <p className="mt-6 text-center text-[11px] text-ink2/70">邀请码注册链接：{location.origin}/login?invite=邀请码</p>
+
+      {/* 临时密码展示 */}
+      <Modal open={!!resetResult} title="密码已重置" onClose={() => setResetResult(null)} width="max-w-xs">
+        {resetResult && (
+          <div className="flex flex-col gap-3.5">
+            <p className="text-xs leading-5 text-ink2">
+              已为 <span className="font-medium text-ink">{resetResult.name}</span> 重置密码，请复制临时密码告知对方，登录后可在账户菜单自行修改：
+            </p>
+            <div className="rounded-xl border border-line bg-base px-3 py-2.5 text-center font-mono text-base font-semibold tracking-wider text-ink">
+              {resetResult.temp}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard?.writeText(resetResult.temp)
+                  toast('临时密码已复制')
+                }}
+                className="btn-ghost h-9 px-4 text-xs"
+              >
+                <IconCopy width={13} height={13} /> 复制
+              </button>
+              <button type="button" onClick={() => setResetResult(null)} className="btn-primary h-9 px-4 text-xs">
+                完成
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   )
 }

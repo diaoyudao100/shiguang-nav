@@ -13,6 +13,11 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.contextMenus.removeAll(() => {
     chrome.contextMenus.create({ id: 'shiguang-page', title: '添加到拾光导航', contexts: ['page'] })
     chrome.contextMenus.create({ id: 'shiguang-link', title: '把链接添加到拾光导航', contexts: ['link'] })
+    chrome.contextMenus.create({
+      id: 'shiguang-note',
+      title: '选中文字存入便签随记',
+      contexts: ['selection'],
+    })
   })
 })
 
@@ -25,7 +30,43 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
   if (info.menuItemId === 'shiguang-link' && info.linkUrl) {
     captureItem(info.linkUrl, (info.selectionText || '').trim())
   }
+  if (info.menuItemId === 'shiguang-note') {
+    saveSelectionNote((info.selectionText || '').trim(), info.pageUrl || '')
+  }
 })
+
+/** 划词 → 便签随记：直接入库（标题取首行/前 30 字），无需弹窗 */
+async function saveSelectionNote(text, pageUrl) {
+  if (!text) {
+    notify('没有选中的文字')
+    return
+  }
+  const body = { text: text.slice(0, 2000), title: text.replace(/\s+/g, ' ').slice(0, 30) }
+  if (pageUrl) body.title = body.title || ''
+  try {
+    const { siteUrl, token } = await chrome.storage.local.get({ siteUrl: DEFAULT_SITE, token: '' })
+    const base = String(siteUrl || DEFAULT_SITE).replace(/\/+$/, '')
+    const res = await fetch(base + '/api/quick-note', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    })
+    if (res.status === 200) {
+      notify('已存入便签随记')
+      return
+    }
+    if (res.status === 401 || res.status === 403) {
+      notify('还没有连接导航站：请先在扩展设置里填连接码')
+      return
+    }
+    notify(`保存失败（${res.status}）`)
+  } catch {
+    notify('保存失败：无法连接导航站')
+  }
+}
 
 function hostnameOf(u) {
   try {

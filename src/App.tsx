@@ -11,7 +11,7 @@ import { Sections, type DragState } from './components/Sections'
 import { LinkModal } from './components/LinkModal'
 import { CategoryModal } from './components/CategoryModal'
 import { DataModal } from './components/DataModal'
-import { SettingsModal } from './components/SettingsModal'
+import { SettingsModal, type Tab } from './components/SettingsModal'
 import { IconGlobe } from './components/icons'
 import { AuthPage } from './pages/AuthPage'
 import { AdminPage } from './pages/AdminPage'
@@ -37,9 +37,28 @@ function Shell() {
   const [catModal, setCatModal] = useState(false)
   const [dataModal, setDataModal] = useState(false)
   const [settingsModal, setSettingsModal] = useState(false)
+  const [settingsTab, setSettingsTab] = useState<Tab | null>(null)
 
   const openAdd = (catId: string | null = null) =>
     setLinkModal({ open: true, site: null, defaultCategoryId: catId ?? activeCat })
+
+  const openSettings = (tab: Tab | null) => {
+    setSettingsTab(tab)
+    setSettingsModal(true)
+  }
+
+  // 账户菜单「快速上手」里的跳转按钮（导入书签 / 配置 AI）
+  useEffect(() => {
+    const onOpenData = () => setDataModal(true)
+    const onOpenSettings = (e: Event) => openSettings((e as CustomEvent<string>).detail as Tab)
+    window.addEventListener('shiguang:open-data', onOpenData)
+    window.addEventListener('shiguang:open-settings', onOpenSettings)
+    return () => {
+      window.removeEventListener('shiguang:open-data', onOpenData)
+      window.removeEventListener('shiguang:open-settings', onOpenSettings)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const dropToCategory = (catId: string) => {
     if (!drag.id) return
@@ -58,7 +77,7 @@ function Shell() {
       <Header
         search={{ scope, setScope, query, setQuery }}
         onAdd={() => openAdd(null)}
-        onSettings={() => setSettingsModal(true)}
+        onSettings={() => openSettings(null)}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         sortMode={sortMode}
         onToggleSort={() => setSortMode((v) => !v)}
@@ -127,7 +146,7 @@ function Shell() {
               </a>
             </div>
             <p className="mt-4 text-center text-[11px] tracking-wide text-ink2/50">
-              {data.settings.siteTitle?.trim() || '拾光导航'} · v2.3.5 · 本地优先，数据尽在掌控
+              {data.settings.siteTitle?.trim() || '拾光导航'} · v2.4.0 · 本地优先，数据尽在掌控
             </p>
           </footer>
         </main>
@@ -145,6 +164,7 @@ function Shell() {
         open={settingsModal}
         onClose={() => setSettingsModal(false)}
         onOpenData={() => setDataModal(true)}
+        initialTab={settingsTab}
       />
     </div>
   )

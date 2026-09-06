@@ -86,6 +86,36 @@ export function publicUserCount(env: Env): Promise<number> {
   return env.DB.prepare('SELECT COUNT(*) AS n FROM users').first<{ n: number }>().then((r) => r?.n ?? 0)
 }
 
+/* ---------------- 登录限速（D1 轻量实现：同 IP 连续失败 5 次锁 10 分钟） ---------------- */
+
+const LOGIN_MAX_FAILS = 5
+const LOGIN_LOCK_MS = 10 * 60_000
+let loginTableReady = false
+
+/** 首次使用时自建限速表（老库无需手动迁移） */
+async function ensureLoginTable(env: Env): Promise<void> {
+  if (loginTableReady) return
+  try {
+    await env.DB
+      .prepare(
+        `CREATE TABLE IF NOT EXISTS login_attempts (
+           ip TEXT PRIMARY KEY,
+           fails INTEGER NOT NULL DEFAULT 0,
+           locked_until INTEGER,
+           last_fail_at INTEGER
+         )`,
+      )
+      .run()
+  } catch {
+    /* 建表失败时限速静默失效，不影响登录 */
+  }
+  loginTableReady = true
+}
+
+function clientIp(req: Request): string {
+  return req.headers.get('CF-Connecting-IP')?.trim() || 'unknown'
+}
+
 /* ---------------- 邮箱注册 / 登录 ---------------- */
 
 export async function handleRegister(req: Request, env: Env): Promise<Response> {
@@ -144,16 +174,54 @@ export async function handleRegister(req: Request, env: Env): Promise<Response> 
 
 export async function handleLogin(req: Request, env: Env): Promise<Response> {
   if (!sameOrigin(req, env)) return fail('非法来源', 403)
+  await ensureLoginTable(env)
+  const ip = clientIp(req)
+  const attempt = await env.DB
+    .prepare('SELECT fails, locked_until FROM login_attempts WHERE ip = ?')
+    .bind(ip)
+    .first<{ fails: number; locked_until: number | null }>()
+  if (attempt?.locked_until && attempt.locked_until > Date.now()) {
+    const mins = Math.max(1, Math.ceil((attempt.locked_until - Date.now()) / 60_000))
+    return fail(`失败次数过多，账户已临时锁定，请约 ${mins} 分钟后再试`, 429)
+  }
   const body = await readJson<{ email?: string; password?: string }>(req)
   const email = body?.email?.trim().toLowerCase() ?? ''
   const password = body?.password ?? ''
   const row = await env.DB.prepare('SELECT * FROM users WHERE email = ?').bind(email).first<UserRow>()
   if (!row || !row.password_hash || !(await verifyPassword(password, row.password_hash))) {
+    const fails = (attempt?.fails ?? 0) + 1
+    const lockedUntil = fails >= LOGIN_MAX_FAILS ? Date.now() + LOGIN_LOCK_MS : null
+    await env.DB
+      .prepare(
+        `INSERT INTO login_attempts (ip, fails, locked_until, last_fail_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT(ip) DO UPDATE SET fails = excluded.fails, locked_until = excluded.locked_until, last_fail_at = excluded.last_fail_at`,
+      )
+      .bind(ip, fails, lockedUntil, Date.now())
+      .run()
     return fail('邮箱或密码不正确', 401)
   }
   if (row.status !== 'active') return fail('该账户已被禁用，请联系管理员', 403)
+  await env.DB.prepare('DELETE FROM login_attempts WHERE ip = ?').bind(ip).run()
   const setCookie = await startSession(env, row)
   return json({ user: toAuthUser(row) }, 200, { 'Set-Cookie': setCookie })
+}
+
+/** PUT /api/auth/password：修改自己的密码（需验证当前密码） */
+export async function handleUpdatePassword(req: Request, env: Env): Promise<Response> {
+  if (!sameOrigin(req, env)) return fail('非法来源', 403)
+  const user = await requireUser(req, env)
+  if (user instanceof Response) return user
+  if (!user.password_hash) return fail('当前账户为第三方登录，未设置密码', 400)
+  const body = await readJson<{ oldPassword?: string; newPassword?: string }>(req)
+  const oldPassword = body?.oldPassword ?? ''
+  const newPassword = body?.newPassword ?? ''
+  if (!(await verifyPassword(oldPassword, user.password_hash))) return fail('当前密码不正确', 400)
+  if (newPassword.length < 8) return fail('新密码至少 8 位')
+  await env.DB
+    .prepare('UPDATE users SET password_hash = ? WHERE id = ?')
+    .bind(await hashPassword(newPassword), user.id)
+    .run()
+  return json({ ok: true })
 }
 
 export async function handleLogout(): Promise<Response> {

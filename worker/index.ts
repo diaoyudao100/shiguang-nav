@@ -10,6 +10,7 @@ import {
   handleOAuthStart,
   handleRegister,
   handleUpdateName,
+  handleUpdatePassword,
 } from './auth'
 import {
   handleAdminOverview,
@@ -25,6 +26,7 @@ import {
   handleDeviceCheck,
   handleDeviceToken,
   handleQuickAdd,
+  handleQuickNote,
   handleQuickSuggest,
   preflight,
 } from './quickadd'
@@ -57,6 +59,7 @@ export default {
       // 当前用户
       if (path === '/api/me' && method === 'GET') return await handleMe(req, env)
       if (path === '/api/me' && method === 'PUT') return await handleUpdateName(req, env)
+      if (path === '/api/auth/password' && method === 'POST') return await handleUpdatePassword(req, env)
 
       // 导航数据
       if (path === '/api/data' && method === 'GET') return await handleGetData(req, env)
@@ -70,13 +73,14 @@ export default {
       if (path === '/api/device-token' && method === 'POST') return await handleDeviceToken(req, env)
       if (path === '/api/device-check' && method === 'GET') return await handleDeviceCheck(req, env)
       if (
-        (path === '/api/quick-add' || path === '/api/quick-suggest' || path === '/api/categories') &&
+        (path === '/api/quick-add' || path === '/api/quick-suggest' || path === '/api/quick-note' || path === '/api/categories') &&
         method === 'OPTIONS'
       ) {
         return preflight(req)
       }
       if (path === '/api/quick-add' && method === 'POST') return await handleQuickAdd(req, env)
       if (path === '/api/quick-suggest' && method === 'POST') return await handleQuickSuggest(req, env)
+      if (path === '/api/quick-note' && method === 'POST') return await handleQuickNote(req, env)
       if (path === '/api/categories' && method === 'GET') return await handleCategories(req, env)
 
       // 管理后台

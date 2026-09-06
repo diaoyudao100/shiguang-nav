@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import type { Category, Site } from '../types'
 import { useStore } from '../hooks/useStore'
-import { SiteCard } from './SiteCard'
+import { SiteCard, Favicon } from './SiteCard'
 import { categoryIcon } from '../lib/categoryIcons'
-import { IconEyeOff, IconPin, IconPlus, IconSearch } from './icons'
+import { getClicks } from '../lib/clicks'
+import { IconEyeOff, IconPin, IconPlus, IconSearch, IconStickyNote, IconTrash } from './icons'
+import { useConfirm } from './Confirm'
+import { useToast } from './Toast'
 
 export interface DragState {
   id: string | null
@@ -22,9 +25,14 @@ interface SectionsProps {
 }
 
 export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite, onAddToCategory }: SectionsProps) {
-  const { data, dropSite } = useStore()
+  const { data, dropSite, restoreTrash, purgeTrashItem } = useStore()
+  const confirm = useConfirm()
+  const toast = useToast()
   const catName = (id: string) => data.categories.find((c) => c.id === id)?.name ?? '未分类'
   const hiddenSites = data.sites.filter((s) => s.hidden)
+  const trash = data.trash ?? []
+  const restore = restoreTrash
+  const purge = purgeTrashItem
 
   const commitDrop = (e: React.DragEvent, catId: string, anchorId: string | null, after: boolean, from: 'pinned' | 'category') => {
     e.preventDefault()
@@ -51,8 +59,11 @@ export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite
     return e.after ? ('bottom' as const) : ('top' as const)
   }
 
-  // 一行容纳 6 张卡片：笔记本及以上档位固定 6 列（用户屏幕 150% 缩放下 CSS 宽约 1272，落在 lg 档）
-  const gridCls = 'grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6'
+  // 一行卡片数跟随外观设置（4 / 6 / 8）；密度字面量映射保证 Tailwind JIT 生成
+  const density = data.settings.gridDensity ?? '6'
+  const gridCls = `grid grid-cols-2 gap-4 md:grid-cols-3 ${
+    density === '8' ? 'gap-3 lg:grid-cols-8' : density === '4' ? 'lg:grid-cols-4' : 'lg:grid-cols-6'
+  }`
 
   const renderCard = (site: Site, catId: string, from: 'pinned' | 'category', chip?: string) => (
     <SiteCard
@@ -84,7 +95,7 @@ export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite
     </div>
   )
 
-  /* 搜索结果（不含已隐藏） */
+  /* 搜索结果（站点 + 便签随记） */
   if (query) {
     const q = query.toLowerCase()
     const hits = data.sites.filter(
@@ -92,27 +103,77 @@ export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite
         !s.hidden &&
         (s.name.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q) || s.url.toLowerCase().includes(q)),
     )
+    const noteHits = (data.notes ?? [])
+      .filter((n) => n.title.toLowerCase().includes(q) || n.text.toLowerCase().includes(q))
+      .slice(0, 8)
+    const openNote = (id: string) => window.dispatchEvent(new CustomEvent('shiguang:open-note', { detail: id }))
     return (
-      <PanelSection header={<SectionHeader icon={<IconSearch width={14} height={14} />} label="搜索结果" count={hits.length} />}>
-        {hits.length === 0 ? (
-          <div className="flex flex-col items-center rounded-2xl border border-dashed border-line-strong/60 px-6 py-14 text-center">
-            <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-accent">
-              <IconSearch width={20} height={20} />
-            </span>
-            <p className="text-sm text-ink2">没有找到匹配的站点，试试切换到「站外」用搜索引擎查找</p>
-          </div>
-        ) : (
-          <div className={gridCls}>{hits.map((s) => renderCard(s, s.categoryId, 'category', catName(s.categoryId)))}</div>
+      <>
+        <PanelSection header={<SectionHeader icon={<IconSearch width={14} height={14} />} label="搜索结果" count={hits.length} />}>
+          {hits.length === 0 ? (
+            <div className="flex flex-col items-center rounded-2xl border border-dashed border-line-strong/60 px-6 py-14 text-center">
+              <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-accent">
+                <IconSearch width={20} height={20} />
+              </span>
+              <p className="text-sm text-ink2">没有找到匹配的站点，试试切换到「站外」用搜索引擎查找</p>
+            </div>
+          ) : (
+            <div className={gridCls}>{hits.map((s) => renderCard(s, s.categoryId, 'category', catName(s.categoryId)))}</div>
+          )}
+        </PanelSection>
+        {noteHits.length > 0 && (
+          <PanelSection
+            header={
+              <SectionHeader
+                icon={<IconStickyNote width={14} height={14} />}
+                label="便签随记"
+                count={noteHits.length}
+              />
+            }
+          >
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+              {noteHits.map((n) => (
+                <button
+                  key={n.id}
+                  type="button"
+                  onClick={() => openNote(n.id)}
+                  className="rounded-xl border border-line bg-base/40 px-3.5 py-2.5 text-left transition-all hover:border-accent/40"
+                >
+                  <span className="block truncate text-[13px] font-semibold text-ink">
+                    {n.title.trim() || '无标题'}
+                  </span>
+                  <span className="mt-0.5 block truncate text-[11px] text-ink2/75">
+                    {n.text.replace(/\s+/g, ' ').trim() || '空便签'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </PanelSection>
         )}
-      </PanelSection>
+      </>
     )
   }
 
-  const pinned = data.sites.filter((s) => s.pinned && !s.hidden)
+  const pinnedBase = data.sites.filter((s) => s.pinned && !s.hidden)
+  let pinned = pinnedBase
+  if (data.settings.autoCommon) {
+    // 智能常用：置顶之外，点击次数最高的前 6 个站点自动进入「置顶 / 常用」区（点击数据仅存本机）
+    const clicks = getClicks()
+    const extra = data.sites
+      .filter((s) => !s.pinned && !s.hidden && (clicks[s.id]?.c ?? 0) > 0)
+      .sort(
+        (a, b) =>
+          (clicks[b.id]?.c ?? 0) - (clicks[a.id]?.c ?? 0) || (clicks[b.id]?.t ?? 0) - (clicks[a.id]?.t ?? 0),
+      )
+      .slice(0, 6)
+    const ids = new Set(pinnedBase.map((s) => s.id))
+    pinned = [...pinnedBase, ...extra.filter((s) => !ids.has(s.id))]
+  }
   const visibleCats =
     activeCat === '__pinned__' ? [] : activeCat ? data.categories.filter((c) => c.id === activeCat) : data.categories
   const showPinned = pinned.length > 0 && (activeCat === null || activeCat === '__pinned__')
   const showHidden = hiddenSites.length > 0 && activeCat === null && !drag.id
+  const showTrash = trash.length > 0 && activeCat === null && !query && !drag.id
 
   return (
     <>
@@ -202,6 +263,75 @@ export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite
           }
         >
           <div className={gridCls}>{hiddenSites.map((s) => renderCard(s, s.categoryId, 'category'))}</div>
+        </PanelSection>
+      )}
+
+      {/* 回收站：删除的站点/分类保留 30 天，可恢复 */}
+      {showTrash && (
+        <PanelSection
+          header={
+            <SectionHeader icon={<IconTrash width={13} height={13} />} label="回收站" count={trash.length} />
+          }
+        >
+          <div className="flex flex-col gap-1.5">
+            {trash.map((t) => {
+              const isSite = t.kind === 'site'
+              const site = t.data as Site
+              const cat = t.data as Category
+              return (
+                <div
+                  key={t.data.id}
+                  className="flex items-center gap-3 rounded-xl border border-line bg-base/40 px-3 py-2"
+                >
+                  {isSite ? (
+                    <Favicon site={site} />
+                  ) : (
+                    <span className="icon-tile text-ink2">
+                      {(() => {
+                        const CatIcon = categoryIcon(cat.icon)
+                        return <CatIcon width={18} height={18} />
+                      })()}
+                    </span>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13px] font-medium text-ink">
+                      {isSite ? site.name : cat.name}
+                    </div>
+                    <div className="truncate text-[11px] text-ink2/70">
+                      {isSite ? '站点' : '分类'} · 删除于 {new Date(t.deletedAt).toLocaleDateString('zh-CN')} · 30 天后自动清除
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      restore(t.data.id)
+                      toast(isSite ? '已恢复站点' : '已恢复分类')
+                    }}
+                    className="shrink-0 rounded-lg px-3 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent/10"
+                  >
+                    恢复
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const ok = await confirm({
+                        danger: true,
+                        title: '彻底删除',
+                        message: '彻底删除后无法恢复，确定吗？',
+                        okText: '彻底删除',
+                      })
+                      if (!ok) return
+                      purge(t.data.id)
+                      toast('已彻底删除')
+                    }}
+                    className="shrink-0 rounded-lg px-3 py-1.5 text-xs text-ink2 transition-colors hover:bg-hover hover:text-danger"
+                  >
+                    彻底删除
+                  </button>
+                </div>
+              )
+            })}
+          </div>
         </PanelSection>
       )}
     </>

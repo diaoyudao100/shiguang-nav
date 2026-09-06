@@ -24,12 +24,23 @@ function fmtTime(ts: number): string {
 
 /** 便签：双栏布局（左列表 + 右编辑/预览），自动保存并随账户同步。
  *  空白便签（无标题且无内容）除「刚新建正在输入的那条」外一律自动清理。 */
-export function NotesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function NotesModal({
+  open,
+  onClose,
+  initialId,
+}: {
+  open: boolean
+  onClose: () => void
+  /** 打开时定位到指定便签（来自站内搜索结果点击） */
+  initialId?: string | null
+}) {
   const { data, addNote, updateNote, updateNoteTitle, toggleNotePin, deleteNote } = useStore()
   const toast = useToast()
   const confirm = useConfirm()
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
+  const [noteQuery, setNoteQuery] = useState('')
+  const [onlyPinned, setOnlyPinned] = useState(false)
   const pendingFocus = useRef<string | null>(null)
   const freshBlankId = useRef<string | null>(null) // 刚新建、允许暂时为空的那条
   const titleRef = useRef<HTMLInputElement>(null)
@@ -69,6 +80,23 @@ export function NotesModal({ open, onClose }: { open: boolean; onClose: () => vo
       titleRef.current?.select()
     }
   }, [selectedId, open])
+
+  // 站内搜索点击便签结果：打开后定位到对应便签
+  useEffect(() => {
+    if (open && initialId && notes.some((n) => n.id === initialId)) {
+      setSelectedId(initialId)
+      setMode('edit')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialId])
+
+  // 左列表过滤：关键字（标题/内容）+ 只看置顶
+  const q = noteQuery.trim().toLowerCase()
+  const visibleNotes = notes.filter(
+    (n) =>
+      (!onlyPinned || n.pinned) &&
+      (!q || n.title.toLowerCase().includes(q) || n.text.toLowerCase().includes(q)),
+  )
 
   const create = () => {
     pruneBlanks(freshBlankId.current) // 新建前先丢掉历史空白
@@ -137,9 +165,9 @@ export function NotesModal({ open, onClose }: { open: boolean; onClose: () => vo
     >
       {/* 双栏：左列表 / 右编辑 */}
       <div className="flex h-[460px] overflow-hidden rounded-2xl border border-line bg-base/40">
-        {/* 左侧：新建 + 标题列表 */}
+        {/* 左侧：新建 + 搜索 + 标题列表 */}
         <div className="flex w-56 shrink-0 flex-col border-r border-line md:w-60">
-          <div className="shrink-0 p-2 pb-1.5">
+          <div className="shrink-0 space-y-1.5 p-2 pb-1.5">
             <button
               type="button"
               onClick={create}
@@ -147,6 +175,26 @@ export function NotesModal({ open, onClose }: { open: boolean; onClose: () => vo
             >
               <IconPlus width={13} height={13} /> 新建便签
             </button>
+            <div className="flex items-center gap-1.5">
+              <input
+                value={noteQuery}
+                onChange={(e) => setNoteQuery(e.target.value)}
+                placeholder="搜索便签…"
+                className="h-8 min-w-0 flex-1 rounded-lg border border-line bg-surface px-2.5 text-xs text-ink outline-none transition-colors placeholder:text-ink2/40 focus:border-accent/50"
+              />
+              <button
+                type="button"
+                onClick={() => setOnlyPinned((v) => !v)}
+                title={onlyPinned ? '显示全部' : '只看置顶'}
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-colors ${
+                  onlyPinned
+                    ? 'border-accent/40 bg-accent-soft text-accent'
+                    : 'border-line bg-surface text-ink2 hover:text-ink'
+                }`}
+              >
+                <IconPin width={13} height={13} />
+              </button>
+            </div>
           </div>
           <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-1.5 pt-0.5">
             {notes.length === 0 && (
@@ -157,7 +205,10 @@ export function NotesModal({ open, onClose }: { open: boolean; onClose: () => vo
                 <p className="text-xs text-ink2">还没有便签</p>
               </div>
             )}
-            {notes.map((n) => {
+            {notes.length > 0 && visibleNotes.length === 0 && (
+              <p className="px-3 py-6 text-center text-xs text-ink2/60">没有匹配的便签</p>
+            )}
+            {visibleNotes.map((n) => {
               const active = n.id === selectedId
               return (
                 <button
@@ -177,8 +228,13 @@ export function NotesModal({ open, onClose }: { open: boolean; onClose: () => vo
                   >
                     {n.title.trim() || '无标题'}
                   </span>
-                  <span className="mt-0.5 block truncate text-[11px] text-accent/75">
-                    {snippet(n) || '空便签'}
+                  <span className="mt-0.5 flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-[11px] text-accent/75">
+                      {snippet(n) || '空便签'}
+                    </span>
+                    <span className="shrink-0 text-[10px] tabular-nums text-ink2/55">
+                      {fmtTime(n.updatedAt)}
+                    </span>
                   </span>
                 </button>
               )

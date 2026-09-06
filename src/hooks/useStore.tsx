@@ -20,6 +20,7 @@ export interface SyncStatus {
   state: 'idle' | 'saving' | 'saved' | 'error'
   time: number
   cloud: boolean
+  errMsg?: string
 }
 
 interface StoreCtx {
@@ -46,6 +47,9 @@ interface StoreCtx {
   updateNoteTitle: (id: string, title: string) => void
   toggleNotePin: (id: string) => void
   deleteNote: (id: string) => void
+  restoreTrash: (id: string) => void
+  purgeTrashItem: (id: string) => void
+  forceSync: () => void
 }
 
 const Ctx = createContext<StoreCtx | null>(null)
@@ -220,8 +224,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             writeSyncMeta({ lastCloudUpdatedAt: pr.updatedAt, dirty: false })
           }
           setSync({ state: 'saved', time: Date.now(), cloud: true })
-        } catch {
-          if (!cancelled) setSync({ state: 'error', time: Date.now(), cloud: true })
+        } catch (e) {
+          if (!cancelled) setSync({ state: 'error', time: Date.now(), cloud: true, errMsg: (e as Error).message })
         }
       } else {
         setSync({ state: 'saved', time: Date.now(), cloud: false })
@@ -253,8 +257,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const r = await api.putData(cloudPayload(data))
         writeSyncMeta({ lastCloudUpdatedAt: r.updatedAt, dirty: false })
         setSync({ state: 'saved', time: Date.now(), cloud: true })
-      } catch {
-        setSync({ state: 'error', time: Date.now(), cloud: true })
+      } catch (e) {
+        setSync({ state: 'error', time: Date.now(), cloud: true, errMsg: (e as Error).message })
       }
     }, 2500)
     return () => clearTimeout(cloudTimer.current)
@@ -295,7 +299,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }),
       deleteSite: (id) =>
         mutate((d) => {
-          d.sites = d.sites.filter((x) => x.id !== id)
+          const s = d.sites.find((x) => x.id === id)
+          if (s) {
+            d.sites = d.sites.filter((x) => x.id !== id)
+            d.trash = d.trash ?? []
+            d.trash.push({ kind: 'site', data: s, deletedAt: Date.now() })
+          }
           return d
         }),
       togglePin: (id) =>
@@ -347,7 +356,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           d.sites.forEach((s) => {
             if (s.categoryId === id) s.categoryId = fallback!.id
           })
+          const removed = d.categories.find((c) => c.id === id)
           d.categories = d.categories.filter((c) => c.id !== id)
+          if (removed) {
+            d.trash = d.trash ?? []
+            d.trash.push({ kind: 'category', data: removed, deletedAt: Date.now() })
+          }
           return d
         }),
       moveCategory: (id, dir) =>
@@ -448,6 +462,44 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           d.notes = d.notes.filter((x) => x.id !== id)
           return d
         }),
+      restoreTrash: (id) =>
+        mutate((d) => {
+          const item = (d.trash ?? []).find((t) => t.data.id === id)
+          if (!item) return d
+          if (item.kind === 'site') {
+            const s = item.data as Site
+            s.categoryId = d.categories.some((c) => c.id === s.categoryId)
+              ? s.categoryId
+              : d.categories[0]?.id ?? ''
+            d.sites.push(s)
+          } else {
+            d.categories.push(item.data as Category)
+          }
+          d.trash = (d.trash ?? []).filter((t) => t.data.id !== id)
+          return d
+        }),
+      purgeTrashItem: (id) =>
+        mutate((d) => {
+          d.trash = (d.trash ?? []).filter((t) => t.data.id !== id)
+          return d
+        }),
+      forceSync: () => {
+        if (!user) {
+          setSync({ state: 'saved', time: Date.now(), cloud: false })
+          return
+        }
+        setSync({ state: 'saving', cloud: true, time: Date.now() })
+        clearTimeout(cloudTimer.current)
+        api
+          .putData(cloudPayload(dataRef.current))
+          .then((r) => {
+            writeSyncMeta({ lastCloudUpdatedAt: r.updatedAt, dirty: false })
+            setSync({ state: 'saved', time: Date.now(), cloud: true })
+          })
+          .catch((e) => {
+            setSync({ state: 'error', time: Date.now(), cloud: true, errMsg: (e as Error).message })
+          })
+      },
     }
   }, [data, sync, mutate])
 
