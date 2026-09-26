@@ -300,9 +300,9 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
           save()
         }}
       >
-        {/* 操作组卡：置顶 / 隐藏 / 删除 / 分类 */}
+        {/* 操作组卡：置顶 / 隐藏 / 删除 / 前移 / 后移 / 分类（窄屏自动换行） */}
         <div className="rounded-2xl border border-line bg-base/40 p-2">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <PillToggle
               active={form.pinned}
               onClick={() => set({ pinned: !form.pinned, hidden: form.pinned ? form.hidden : false })}
