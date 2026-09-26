@@ -133,8 +133,20 @@ export function Header({ onAdd, onSettings, onToggleSidebar, sortMode, onToggleS
   const { data } = useStore()
   const { user } = useAuth()
   const brand = data.settings.siteTitle?.trim() || '拾光导航'
+  // 滚动响应：离开顶部后顶栏加深阴影，页面更有整体感
+  const [scrolled, setScrolled] = useState(false)
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
   return (
-    <header className="glass-header sticky top-0 z-40">
+    <header
+      className={`glass-header sticky top-0 z-40 transition-shadow duration-300 ${
+        scrolled ? 'shadow-[0_14px_36px_-24px_rgba(0,0,0,0.5)]' : ''
+      }`}
+    >
       <div className="flex h-16 items-center gap-2 px-3 sm:gap-3 sm:px-5 md:px-6">
         <button
           onClick={onToggleSidebar}

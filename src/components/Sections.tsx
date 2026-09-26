@@ -5,6 +5,7 @@ import { SiteCard, Favicon } from './SiteCard'
 import { categoryIcon } from '../lib/categoryIcons'
 import { getClicks } from '../lib/clicks'
 import { IconEyeOff, IconPin, IconPlus, IconSearch, IconStickyNote, IconTrash } from './icons'
+import { EmptyArt } from './EmptyArt'
 import { useConfirm } from './Confirm'
 import { useToast } from './Toast'
 
@@ -25,13 +26,15 @@ interface SectionsProps {
 }
 
 export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite, onAddToCategory }: SectionsProps) {
-  const { data, dropSite, restoreTrash, purgeTrashItem } = useStore()
+  const { data, dropSite, restoreTrash, purgeTrashItem, restoreAllTrash, emptyTrash } = useStore()
   const confirm = useConfirm()
   const toast = useToast()
   const catName = (id: string) => data.categories.find((c) => c.id === id)?.name ?? '未分类'
   const hiddenSites = data.sites.filter((s) => s.hidden)
   const trash = data.trash ?? []
   const restore = restoreTrash
+  const restoreAll = restoreAllTrash
+  const empty = emptyTrash
   const purge = purgeTrashItem
 
   const commitDrop = (e: React.DragEvent, catId: string, anchorId: string | null, after: boolean, from: 'pinned' | 'category') => {
@@ -112,11 +115,9 @@ export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite
       <>
         <PanelSection header={<SectionHeader icon={<IconSearch width={14} height={14} />} label="搜索结果" count={hits.length} />}>
           {hits.length === 0 ? (
-            <div className="flex flex-col items-center rounded-2xl border border-dashed border-line-strong/60 px-6 py-14 text-center">
-              <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-accent">
-                <IconSearch width={20} height={20} />
-              </span>
-              <p className="text-sm text-ink2">没有找到匹配的站点，试试切换到「站外」用搜索引擎查找</p>
+            <div className="flex flex-col items-center rounded-2xl border border-dashed border-line-strong/60 px-6 py-12 text-center">
+              <EmptyArt kind="search" />
+              <p className="mt-3 text-sm text-ink2">没有找到匹配的站点，试试切换到「站外」用搜索引擎查找</p>
             </div>
           ) : (
             <div className={gridCls}>{hits.map((s, i) => renderCard(s, s.categoryId, 'category', catName(s.categoryId), i))}</div>
@@ -270,10 +271,38 @@ export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite
       {/* 回收站：删除的站点/分类保留 30 天，可恢复 */}
       {showTrash && (
         <PanelSection
-          header={
-            <SectionHeader icon={<IconTrash width={13} height={13} />} label="回收站" count={trash.length} />
-          }
+          header={<SectionHeader icon={<IconTrash width={13} height={13} />} label="回收站" count={trash.length} />}
         >
+          {/* 批量操作 */}
+          <div className="mb-2.5 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                restoreAll()
+                toast('已恢复全部项目')
+              }}
+              className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink2 transition-colors hover:border-accent/45 hover:text-accent"
+            >
+              全部恢复
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                const ok = await confirm({
+                  danger: true,
+                  title: '清空回收站',
+                  message: `将彻底删除回收站里的 ${trash.length} 项，无法恢复，确定吗？`,
+                  okText: '清空',
+                })
+                if (!ok) return
+                emptyTrash()
+                toast('回收站已清空')
+              }}
+              className="rounded-lg border border-line bg-surface px-3 py-1.5 text-xs font-medium text-ink2 transition-colors hover:border-danger/45 hover:text-danger"
+            >
+              清空回收站
+            </button>
+          </div>
           <div className="flex flex-col gap-1.5">
             {trash.map((t) => {
               const isSite = t.kind === 'site'

@@ -4,7 +4,7 @@ import { useStore } from '../hooks/useStore'
 import { aiConfigured, aiDescribeSite } from '../lib/ai'
 import { faviconUrl, hostOf, isLikelyUrl, normalizeUrl } from '../lib/favicon'
 import { Field, Modal, compactCls, inputCls } from './Modal'
-import { IconEyeOff, IconImage, IconPin, IconSparkles, IconTrash, IconUpload } from './icons'
+import { IconChevronDown, IconChevronUp, IconEyeOff, IconImage, IconPin, IconSparkles, IconTrash, IconUpload } from './icons'
 import { useToast } from './Toast'
 import { useConfirm } from './Confirm'
 
@@ -52,7 +52,7 @@ function PillToggle({
 }
 
 export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, onClose }: LinkModalProps) {
-  const { data, addSite, updateSite, deleteSite } = useStore()
+  const { data, addSite, updateSite, deleteSite, moveSite } = useStore()
   const toast = useToast()
   const confirm = useConfirm()
   const [form, setForm] = useState({
@@ -260,6 +260,13 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
   const color = form.iconColor.trim()
   const batchLines = batchText.split('\n').filter((l) => l.trim()).length
 
+  // 排序位置：以「已保存」的分类为准（表单里未保存的改分类不影响前后移判断）
+  const storedCatId = isEdit ? data.sites.find((s) => s.id === site!.id)?.categoryId : undefined
+  const sameCat = isEdit ? data.sites.filter((s) => s.categoryId === storedCatId) : []
+  const catPos = sameCat.findIndex((s) => s.id === site!.id)
+  const canMoveUp = catPos > 0
+  const canMoveDown = catPos >= 0 && catPos < sameCat.length - 1
+
   return (
     <Modal
       open={open}
@@ -317,6 +324,36 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
                 <IconTrash width={13} height={13} />
                 删除
               </button>
+            )}
+            {isEdit && (
+              <>
+                <button
+                  type="button"
+                  title="前移一位（在本分类内的位置）"
+                  aria-label="前移"
+                  disabled={!canMoveUp}
+                  onClick={() => {
+                    moveSite(site!.id, -1)
+                    toast('已前移')
+                  }}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink2 transition-all hover:border-line-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <IconChevronUp width={13} height={13} />
+                </button>
+                <button
+                  type="button"
+                  title="后移一位（在本分类内的位置）"
+                  aria-label="后移"
+                  disabled={!canMoveDown}
+                  onClick={() => {
+                    moveSite(site!.id, 1)
+                    toast('已后移')
+                  }}
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink2 transition-all hover:border-line-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <IconChevronDown width={13} height={13} />
+                </button>
+              </>
             )}
             <select
               className={compactCls + ' ms-auto h-9 w-28 text-xs leading-[34px]'}

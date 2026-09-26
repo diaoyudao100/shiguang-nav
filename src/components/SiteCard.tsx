@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { Site } from '../types'
 import { useStore } from '../hooks/useStore'
 import { avatarColor } from '../lib/favicon'
 import { recordClick } from '../lib/clicks'
-import { IconPin, IconSettings } from './icons'
+import { useToast } from './Toast'
+import { IconEyeOff, IconExternal, IconPin, IconSettings, IconTrash } from './icons'
 
 /** 触屏长按时长：按住此时长唤起编辑弹窗（替代原触屏常显齿轮） */
 const LONG_PRESS_MS = 480
@@ -90,8 +92,57 @@ export function SiteCard({
   onDropCard,
   onEdit,
 }: CardProps) {
-  const { data } = useStore()
+  const { data, togglePin, toggleHidden, deleteSite } = useStore()
+  const toast = useToast()
   const showUrl = data.settings.showSiteUrl !== false
+
+  // ── PC 右键菜单：打开 / 编辑 / 置顶 / 隐藏 / 删除 ──
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null)
+  useEffect(() => {
+    if (!menu) return
+    const close = () => setMenu(null)
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
+    document.addEventListener('mousedown', close)
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('scroll', close, true)
+    window.addEventListener('resize', close)
+    return () => {
+      document.removeEventListener('mousedown', close)
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('scroll', close, true)
+      window.removeEventListener('resize', close)
+    }
+  }, [menu])
+
+  const del = () => {
+    deleteSite(site.id)
+    toast('已移入回收站，30 天内可恢复')
+  }
+  const menuItems: Array<{ label: string; icon: React.ReactNode; danger?: boolean; onClick: () => void }> = [
+    {
+      label: '打开网站',
+      icon: <IconExternal width={14} height={14} />,
+      onClick: () => window.open(site.url, '_blank', 'noopener'),
+    },
+    { label: '编辑', icon: <IconSettings width={14} height={14} />, onClick: onEdit },
+    {
+      label: site.pinned ? '取消置顶' : '置顶',
+      icon: <IconPin width={14} height={14} />,
+      onClick: () => {
+        togglePin(site.id)
+        toast(site.pinned ? '已取消置顶' : '已置顶')
+      },
+    },
+    {
+      label: site.hidden ? '取消隐藏' : '隐藏',
+      icon: <IconEyeOff width={14} height={14} />,
+      onClick: () => {
+        toggleHidden(site.id)
+        toast(site.hidden ? '已取消隐藏' : '已隐藏')
+      },
+    },
+    { label: '删除', icon: <IconTrash width={14} height={14} />, danger: true, onClick: del },
+  ]
 
   // ── 触屏长按 → 唤起编辑弹窗（方案 A：卡片上无常显齿轮）──────────
   const pressTimer = useRef<ReturnType<typeof setTimeout>>()
@@ -133,9 +184,11 @@ export function SiteCard({
       fired.current = false
     }
   }
-  // 长按会唤起系统的链接预览菜单（Android/iOS），触屏来源时阻止之；桌面右键菜单不受影响
+  // 长按会唤起系统的链接预览菜单（Android/iOS），触屏来源时阻止之；桌面右键唤起自定义菜单
   const onContextMenu = (e: React.MouseEvent) => {
-    if (Date.now() - lastTouchAt.current < 1200) e.preventDefault()
+    e.preventDefault()
+    if (Date.now() - lastTouchAt.current < 1200) return
+    setMenu({ x: e.clientX, y: e.clientY })
   }
   return (
     <div
@@ -230,6 +283,38 @@ export function SiteCard({
           }}
         />
       )}
+
+      {/* PC 右键菜单（Portal 到 body，避免被卡片裁切） */}
+      {menu &&
+        createPortal(
+          <div className="fixed inset-0 z-[70]" onContextMenu={(e) => e.preventDefault()}>
+            <div
+              className="glass-panel anim-pop absolute w-44 rounded-xl p-1 shadow-pop"
+              style={{
+                left: Math.min(menu.x, window.innerWidth - 190),
+                top: Math.min(menu.y, window.innerHeight - 216),
+              }}
+              onMouseDown={(e) => e.stopPropagation()}
+            >
+              {menuItems.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => {
+                    setMenu(null)
+                    item.onClick()
+                  }}
+                  className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-[13px] transition-colors hover:bg-hover ${
+                    item.danger ? 'text-danger' : 'text-ink'
+                  }`}
+                >
+                  <span className={item.danger ? 'text-danger' : 'text-ink2'}>{item.icon}</span>
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>,
+          document.body,
+        )}
     </div>
   )
 }

@@ -797,6 +797,32 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
             </button>
           </div>
 
+          {/* OLED 纯黑 */}
+          <div className="flex items-center justify-between rounded-xl border border-line bg-base px-4 py-3">
+            <div>
+              <div className="text-sm font-medium">OLED 纯黑</div>
+              <div className="mt-0.5 text-xs text-ink2">深色模式下使用纯黑背景，更适合 OLED 屏幕</div>
+            </div>
+            <button
+              type="button"
+              aria-label="OLED 纯黑"
+              onClick={() => {
+                const v = !form.oledBlack
+                setForm((f) => ({ ...f, oledBlack: v }))
+                setSettings({ oledBlack: v })
+              }}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                form.oledBlack ? 'bg-accent' : 'bg-line'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                  form.oledBlack ? 'left-[22px]' : 'left-0.5'
+                }`}
+              />
+            </button>
+          </div>
+
           {/* 智能常用 */}
           <div className="flex items-center justify-between rounded-xl border border-line bg-base px-4 py-3">
             <div>
@@ -1016,7 +1042,7 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
               />
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{form.siteTitle || '拾光导航'}</div>
-                <div className="mt-0.5 text-xs text-ink2">v2.5.0 · 个人网址导航</div>
+                <div className="mt-0.5 text-xs text-ink2">v2.6.0 · 个人网址导航</div>
               </div>
               <a
                 href="https://github.com/diaoyudao100/shiguang-nav"
