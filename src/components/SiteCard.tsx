@@ -1,9 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Site } from '../types'
 import { useStore } from '../hooks/useStore'
 import { avatarColor } from '../lib/favicon'
 import { recordClick } from '../lib/clicks'
 import { IconPin, IconSettings } from './icons'
+
+/** 触屏长按时长：按住此时长唤起编辑弹窗（替代原触屏常显齿轮） */
+const LONG_PRESS_MS = 480
 
 function Highlight({ text, query }: { text: string; query: string }) {
   if (!query) return <>{text}</>
@@ -87,6 +90,51 @@ export function SiteCard({
 }: CardProps) {
   const { data } = useStore()
   const showUrl = data.settings.showSiteUrl !== false
+
+  // ── 触屏长按 → 唤起编辑弹窗（方案 A：卡片上无常显齿轮）──────────
+  const pressTimer = useRef<ReturnType<typeof setTimeout>>()
+  const pressOrigin = useRef({ x: 0, y: 0 })
+  const lastTouchAt = useRef(0)
+  const fired = useRef(false) // 长按已触发：随后手指抬起产生的 click 需吞掉，避免误跳转
+  const [pressing, setPressing] = useState(false)
+
+  const cancelPress = () => {
+    clearTimeout(pressTimer.current)
+    setPressing(false)
+  }
+  useEffect(() => cancelPress, [])
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (sortMode) return // 排序模式下走拖拽，不触发长按
+    const t = e.touches[0]
+    pressOrigin.current = { x: t.clientX, y: t.clientY }
+    lastTouchAt.current = Date.now()
+    fired.current = false
+    setPressing(true)
+    pressTimer.current = setTimeout(() => {
+      fired.current = true
+      setPressing(false)
+      navigator.vibrate?.(15) // 触感反馈（不支持时静默）
+      onEdit()
+    }, LONG_PRESS_MS)
+  }
+  const onTouchMove = (e: React.TouchEvent) => {
+    const t = e.touches[0]
+    // 移动超过阈值视为滚动，取消长按
+    if (Math.hypot(t.clientX - pressOrigin.current.x, t.clientY - pressOrigin.current.y) > 12) cancelPress()
+  }
+  // 吞掉长按触发后紧接着的 click，防止打开网站而不是停在编辑弹窗
+  const onClickCapture = (e: React.MouseEvent) => {
+    if (fired.current) {
+      e.preventDefault()
+      e.stopPropagation()
+      fired.current = false
+    }
+  }
+  // 长按会唤起系统的链接预览菜单（Android/iOS），触屏来源时阻止之；桌面右键菜单不受影响
+  const onContextMenu = (e: React.MouseEvent) => {
+    if (Date.now() - lastTouchAt.current < 1200) e.preventDefault()
+  }
   return (
     <div
       draggable
@@ -98,11 +146,17 @@ export function SiteCard({
       onDragEnd={onDragEnd}
       onDragOver={(e) => onDragOverCard?.(e, site)}
       onDrop={(e) => onDropCard?.(e, site)}
-      className={`group card relative z-0 p-3 transition-[height] hover:z-30 ${
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={cancelPress}
+      onTouchCancel={cancelPress}
+      onClickCapture={onClickCapture}
+      onContextMenu={onContextMenu}
+      className={`group card relative z-0 min-w-0 p-3 transition-[height] hover:z-30 ${
         sortMode ? 'cursor-grab border-accent/40 ring-1 ring-accent/25' : 'cursor-pointer'
       } ${isDragging || site.hidden ? 'opacity-60' : ''} ${dropEdge === 'top' ? 'drop-line-top' : ''} ${
         dropEdge === 'bottom' ? 'drop-line-bottom' : ''
-      }`}
+      } ${pressing ? 'scale-[0.985] border-accent/60 shadow-glow' : ''}`}
     >
       <div className="flex items-center gap-3">
         <Favicon site={site} />

@@ -236,14 +236,16 @@ select:focus-visible {
   background: transparent;
 }
 
-/* 触屏设备：没有 hover，卡片操作按钮常显，避免无法编辑/删除 */
+/* 触屏设备：没有 hover，齿轮按钮不再常显（遮挡卡片），改为「长按卡片」唤起编辑弹窗 */
 @media (hover: none) {
-  .card-actions {
-    opacity: 1;
-    transform: none;
-  }
   .group:hover .icon-tile {
     transform: none;
+  }
+  /* 长按期间阻止系统默认的链接预览/文字选择，保证长按手势干净触发 */
+  .card {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
 }
 

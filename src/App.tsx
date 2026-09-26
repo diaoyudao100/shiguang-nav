@@ -60,6 +60,19 @@ function Shell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // 触屏设备一次性提示：齿轮已改为「长按卡片」唤起编辑
+  useEffect(() => {
+    if (!window.matchMedia('(hover: none)').matches) return
+    const KEY = 'shiguang.longpress.hint'
+    if (localStorage.getItem(KEY)) return
+    const t = setTimeout(() => {
+      toast('提示：长按网站卡片可编辑 / 置顶 / 隐藏')
+      localStorage.setItem(KEY, '1')
+    }, 1500)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const dropToCategory = (catId: string) => {
     if (!drag.id) return
     if (catId === '__pinned__') {
