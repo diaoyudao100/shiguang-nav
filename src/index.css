@@ -188,6 +188,21 @@ html::before {
   mask-image: linear-gradient(to bottom, black, transparent 460px);
 }
 
+/* 全局细噪点（grain）：叠加在渐变底色上消除"塑料感"，静止不耗性能 */
+html::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.032;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px 160px;
+}
+.dark html::after {
+  opacity: 0.05;
+}
+
 /* 禁止移动浏览器自动放大字体（font boosting 会把弹窗等布局撑爆） */
 html {
   -webkit-text-size-adjust: 100%;
@@ -252,6 +267,17 @@ select:focus-visible {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
     user-select: none;
+  }
+}
+
+/* 单色图标模式：favicon 转灰阶压低色彩噪音，悬浮时恢复彩色（触屏无 hover 保持单色） */
+html[data-mono='1'] .card .icon-tile img {
+  filter: grayscale(1) contrast(1.05);
+  transition: filter 0.25s ease;
+}
+@media (hover: hover) {
+  html[data-mono='1'] .card:hover .icon-tile img {
+    filter: none;
   }
 }
 
@@ -485,6 +511,27 @@ select:focus-visible {
       opacity: 1;
       transform: none;
     }
+  }
+}
+
+/* 卡片入场：按序淡入上浮（每张卡通过 --i 传序号，最多错开 14 档） */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.card-enter {
+  animation: card-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(min(var(--i, 0), 14) * 40ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-enter {
+    animation: none;
   }
 }
 

@@ -771,6 +771,32 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
             </div>
           </Field>
 
+          {/* 单色图标 */}
+          <div className="flex items-center justify-between rounded-xl border border-line bg-base px-4 py-3">
+            <div>
+              <div className="text-sm font-medium">单色图标</div>
+              <div className="mt-0.5 text-xs text-ink2">卡片图标转灰阶，鼠标悬浮时恢复彩色（触屏保持单色）</div>
+            </div>
+            <button
+              type="button"
+              aria-label="单色图标"
+              onClick={() => {
+                const v = !form.monoIcons
+                setForm((f) => ({ ...f, monoIcons: v }))
+                setSettings({ monoIcons: v })
+              }}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                form.monoIcons ? 'bg-accent' : 'bg-line'
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                  form.monoIcons ? 'left-[22px]' : 'left-0.5'
+                }`}
+              />
+            </button>
+          </div>
+
           {/* 智能常用 */}
           <div className="flex items-center justify-between rounded-xl border border-line bg-base px-4 py-3">
             <div>
@@ -990,7 +1016,7 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
               />
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{form.siteTitle || '拾光导航'}</div>
-                <div className="mt-0.5 text-xs text-ink2">v2.4.0 · 个人网址导航</div>
+                <div className="mt-0.5 text-xs text-ink2">v2.5.0 · 个人网址导航</div>
               </div>
               <a
                 href="https://github.com/diaoyudao100/shiguang-nav"

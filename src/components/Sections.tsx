@@ -65,12 +65,13 @@ export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite
     density === '8' ? 'gap-3 lg:grid-cols-8' : density === '4' ? 'lg:grid-cols-4' : 'lg:grid-cols-6'
   }`
 
-  const renderCard = (site: Site, catId: string, from: 'pinned' | 'category', chip?: string) => (
+  const renderCard = (site: Site, catId: string, from: 'pinned' | 'category', chip?: string, i?: number) => (
     <SiteCard
       key={site.id}
       site={site}
       query={query}
       categoryChip={chip}
+      enterIndex={i}
       sortMode={sortMode}
       isDragging={drag.id === site.id}
       dropEdge={edgeOf(catId, site)}
@@ -118,7 +119,7 @@ export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite
               <p className="text-sm text-ink2">没有找到匹配的站点，试试切换到「站外」用搜索引擎查找</p>
             </div>
           ) : (
-            <div className={gridCls}>{hits.map((s) => renderCard(s, s.categoryId, 'category', catName(s.categoryId)))}</div>
+            <div className={gridCls}>{hits.map((s, i) => renderCard(s, s.categoryId, 'category', catName(s.categoryId), i))}</div>
           )}
         </PanelSection>
         {noteHits.length > 0 && (
@@ -198,7 +199,7 @@ export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite
             />
           }
         >
-          <div className={gridCls}>{pinned.map((s) => renderCard(s, s.categoryId, 'pinned'))}</div>
+          <div className={gridCls}>{pinned.map((s, i) => renderCard(s, s.categoryId, 'pinned', undefined, i))}</div>
         </PanelSection>
       )}
 
@@ -247,7 +248,7 @@ export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite
             {items.length === 0 ? (
               renderDropZone(cat.id)
             ) : (
-              <div className={gridCls}>{items.map((s) => renderCard(s, cat.id, 'category'))}</div>
+              <div className={gridCls}>{items.map((s, i) => renderCard(s, cat.id, 'category', undefined, i))}</div>
             )}
           </PanelSection>
         )
@@ -262,7 +263,7 @@ export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite
             />
           }
         >
-          <div className={gridCls}>{hiddenSites.map((s) => renderCard(s, s.categoryId, 'category'))}</div>
+          <div className={gridCls}>{hiddenSites.map((s, i) => renderCard(s, s.categoryId, 'category', undefined, i))}</div>
         </PanelSection>
       )}
 

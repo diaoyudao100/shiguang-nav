@@ -24,6 +24,7 @@
           document.documentElement.style.setProperty('--accent-custom', s.accentCustom);
         }
         if (s.bgStyle && s.bgStyle !== 'zinc') document.documentElement.dataset.bg = s.bgStyle;
+        if (s.monoIcons) document.documentElement.dataset.mono = '1';
       } catch (e) {}
     </script>
   </head>
