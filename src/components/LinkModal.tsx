@@ -41,7 +41,7 @@ function PillToggle({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`flex h-9 w-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border text-xs font-medium transition-all sm:w-auto sm:px-3 ${
+      className={`flex h-9 w-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border text-xs font-medium transition-all sm:w-auto sm:px-2.5 ${
         active
           ? 'border-accent/40 bg-accent-soft text-accent'
           : 'border-line bg-surface text-ink2 hover:border-line-strong hover:text-ink'
@@ -302,20 +302,22 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
           save()
         }}
       >
-        {/* 操作组卡：置顶 / 隐藏 / 删除 / 前移 / 后移 / 分类（窄屏自动换行） */}
+        {/* 操作组卡：置顶 / 隐藏 / 删除 / 前移 / 后移 / 分类
+            手机端：全部图标化 + 分类下拉占据剩余宽度（显示全名），恒定单行
+            PC 端：文字胶囊 + 下拉收窄（w-92），同样单行 */}
         <div className="rounded-2xl border border-line bg-base/40 p-2">
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <PillToggle
               active={form.pinned}
               onClick={() => set({ pinned: !form.pinned, hidden: form.pinned ? form.hidden : false })}
               icon={<IconPin width={13} height={13} />}
-              label={form.pinned ? '已置顶' : '置顶'}
+              label="置顶"
             />
             <PillToggle
               active={form.hidden}
               onClick={() => set({ hidden: !form.hidden, pinned: form.hidden ? form.pinned : false })}
               icon={<IconEyeOff width={13} height={13} />}
-              label={form.hidden ? '已隐藏' : '隐藏'}
+              label="隐藏"
             />
             {isEdit && (
               <button
@@ -323,7 +325,7 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
                 onClick={remove}
                 aria-label="删除"
                 title="删除"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink2 transition-all hover:border-danger/40 hover:text-danger sm:w-auto sm:px-3"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink2 transition-all hover:border-danger/40 hover:text-danger sm:w-auto sm:px-2.5"
               >
                 <IconTrash width={13} height={13} />
                 <span className="hidden sm:inline">删除</span>
@@ -340,7 +342,7 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
                     moveSite(site!.id, -1)
                     toast('已前移')
                   }}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink2 transition-all hover:border-line-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink2 transition-all hover:border-line-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <IconChevronUp width={13} height={13} />
                 </button>
@@ -353,14 +355,14 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
                     moveSite(site!.id, 1)
                     toast('已后移')
                   }}
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink2 transition-all hover:border-line-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink2 transition-all hover:border-line-strong hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <IconChevronDown width={13} height={13} />
                 </button>
               </>
             )}
             <select
-              className={compactCls + ' ms-auto h-9 w-[88px] text-xs leading-[34px] sm:w-28'}
+              className={compactCls + ' ms-auto h-9 min-w-0 flex-1 text-xs leading-[34px] sm:w-[88px] sm:flex-none'}
               value={form.categoryId}
               onChange={(e) => set({ categoryId: e.target.value })}
               aria-label="分类"
