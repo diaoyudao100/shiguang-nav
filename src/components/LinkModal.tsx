@@ -41,7 +41,7 @@ function PillToggle({
       onClick={onClick}
       aria-label={label}
       title={label}
-      className={`flex h-9 w-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border text-xs font-medium transition-all sm:w-auto sm:px-2.5 ${
+      className={`flex h-9 w-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border text-xs font-medium transition-all sm:w-auto sm:px-2 ${
         active
           ? 'border-accent/40 bg-accent-soft text-accent'
           : 'border-line bg-surface text-ink2 hover:border-line-strong hover:text-ink'
@@ -325,7 +325,7 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
                 onClick={remove}
                 aria-label="删除"
                 title="删除"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink2 transition-all hover:border-danger/40 hover:text-danger sm:w-auto sm:px-2.5"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink2 transition-all hover:border-danger/40 hover:text-danger sm:h-9 sm:w-auto sm:px-2.5"
               >
                 <IconTrash width={13} height={13} />
                 <span className="hidden sm:inline">删除</span>
@@ -362,7 +362,7 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
               </>
             )}
             <select
-              className={compactCls + ' ms-auto h-9 min-w-0 flex-1 text-xs leading-[34px] sm:w-[88px] sm:flex-none'}
+              className={compactCls + ' ms-auto h-8 min-w-[90px] flex-1 text-xs leading-[30px] sm:h-9 sm:leading-[34px]'}
               value={form.categoryId}
               onChange={(e) => set({ categoryId: e.target.value })}
               aria-label="分类"
