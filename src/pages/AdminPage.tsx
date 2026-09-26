@@ -4,7 +4,8 @@ import { useAuth } from '../hooks/useAuth'
 import { navigate } from '../lib/router'
 import { useToast } from '../components/Toast'
 import { useConfirm } from '../components/Confirm'
-import { btnGhost, btnPrimary, inputCls, Modal } from '../components/Modal'
+import { btnGhost, btnPrimary, Modal } from '../components/Modal'
+import { SelectMenu } from '../components/SelectMenu'
 import { IconArrowUp, IconCopy, IconPlus, IconTrash } from '../components/icons'
 
 const PROVIDER_LABEL: Record<string, string> = {
@@ -169,20 +170,32 @@ export function AdminPage() {
         <div className="flex flex-wrap items-end gap-2.5">
           <label className="flex flex-col gap-1.5 text-xs text-ink2">
             有效期
-            <select className={inputCls + ' w-32'} value={expireDays} onChange={(e) => setExpireDays(e.target.value)}>
-              <option value="1">1 天</option>
-              <option value="7">7 天</option>
-              <option value="30">30 天</option>
-              <option value="never">永久</option>
-            </select>
+            <SelectMenu
+              ariaLabel="有效期"
+              className="w-32"
+              value={expireDays}
+              onChange={(v) => setExpireDays(v)}
+              options={[
+                { value: '1', label: '1 天' },
+                { value: '7', label: '7 天' },
+                { value: '30', label: '30 天' },
+                { value: 'never', label: '永久' },
+              ]}
+            />
           </label>
           <label className="flex flex-col gap-1.5 text-xs text-ink2">
             可用次数
-            <select className={inputCls + ' w-32'} value={maxUses} onChange={(e) => setMaxUses(e.target.value)}>
-              <option value="1">1 次</option>
-              <option value="5">5 次</option>
-              <option value="10">10 次</option>
-            </select>
+            <SelectMenu
+              ariaLabel="可用次数"
+              className="w-32"
+              value={maxUses}
+              onChange={(v) => setMaxUses(v)}
+              options={[
+                { value: '1', label: '1 次' },
+                { value: '5', label: '5 次' },
+                { value: '10', label: '10 次' },
+              ]}
+            />
           </label>
           <button onClick={createInvite} disabled={creating} className="btn-primary h-[42px]">
             <IconPlus width={14} height={14} /> {creating ? '生成中…' : '生成邀请码'}
