@@ -12,7 +12,7 @@ import { LinkModal } from './components/LinkModal'
 import { CategoryModal } from './components/CategoryModal'
 import { DataModal } from './components/DataModal'
 import { SettingsModal, type Tab } from './components/SettingsModal'
-import { IconGlobe } from './components/icons'
+import { EmptyArt } from './components/EmptyArt'
 import { AuthPage } from './pages/AuthPage'
 import { useToast } from './components/Toast'
 import type { Site } from './types'
@@ -40,6 +40,21 @@ function Shell() {
   const [dataModal, setDataModal] = useState(false)
   const [settingsModal, setSettingsModal] = useState(false)
   const [settingsTab, setSettingsTab] = useState<Tab | null>(null)
+  /** 滚动到底部时取消内容区底部渐隐 */
+  const [atBottom, setAtBottom] = useState(true)
+
+  // 滚动位置：未到底时给主内容区加底部渐隐 mask
+  useEffect(() => {
+    const onScroll = () =>
+      setAtBottom(window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll)
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [])
 
   const openAdd = (catId: string | null = null) =>
     setLinkModal({ open: true, site: null, defaultCategoryId: catId ?? activeCat })
@@ -107,7 +122,17 @@ function Shell() {
           mobileOpen={sidebarOpen}
           onCloseMobile={() => setSidebarOpen(false)}
         />
-        <main className="min-w-0 flex-1 px-4 pb-6 pt-4 sm:px-5 sm:pt-6 md:px-7 md:pt-3.5">
+        <main
+          className="min-w-0 flex-1 px-4 pb-6 pt-4 sm:px-5 sm:pt-6 md:px-7 md:pt-3.5"
+          style={
+            atBottom
+              ? undefined
+              : {
+                  maskImage: 'linear-gradient(180deg, #000 calc(100% - 56px), transparent)',
+                  WebkitMaskImage: 'linear-gradient(180deg, #000 calc(100% - 56px), transparent)',
+                }
+          }
+        >
           {/* 移动端：顶栏不放搜索，正文顶部保留 */}
           <div className="mb-5 md:hidden">
             <SearchBar scope={scope} setScope={setScope} query={query} setQuery={setQuery} />
@@ -126,11 +151,9 @@ function Shell() {
           </div>
 
           {data.sites.length === 0 && !(scope === 'in' && query) && (
-            <div className="mt-2 flex flex-col items-center rounded-2xl border border-dashed border-line-strong/60 px-6 py-16 text-center">
-              <span className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent-soft text-accent shadow-[var(--shadow-glow)]">
-                <IconGlobe width={24} height={24} />
-              </span>
-              <p className="text-[15px] font-medium text-ink">这里还是空的</p>
+            <div className="mt-2 flex flex-col items-center rounded-2xl border border-dashed border-line-strong/60 px-6 py-14 text-center">
+              <EmptyArt kind="empty" />
+              <p className="mt-4 text-[15px] font-medium text-ink">这里还是空的</p>
               <p className="mt-1.5 text-xs text-ink2">添加第一个网站，或从浏览器书签一键导入</p>
               <div className="mt-6 flex justify-center gap-2.5">
                 <button onClick={() => openAdd(null)} className="btn-primary">
@@ -188,7 +211,7 @@ function Shell() {
 function Views() {
   const path = usePath()
   const { data } = useStore()
-  const { siteTitle, favicon, accent, accentCustom, bgStyle, bgImage, bgImageEnabled, monoIcons } = data.settings
+  const { siteTitle, favicon, accent, accentCustom, bgStyle, bgImage, bgImageEnabled, monoIcons, oledBlack } = data.settings
 
   // 网页标题、站点图标、强调色与背景跟随设置
   useEffect(() => {
@@ -219,6 +242,10 @@ function Views() {
     if (monoIcons) root.dataset.mono = '1'
     else root.removeAttribute('data-mono')
 
+    // OLED 纯黑：深色模式下底色压到纯黑
+    if (oledBlack) root.dataset.oled = '1'
+    else root.removeAttribute('data-oled')
+
     if (bgImageEnabled && bgImage?.trim()) {
       const scrim = 'color-mix(in srgb, var(--c-base) 60%, transparent)'
       root.style.setProperty(
@@ -230,7 +257,7 @@ function Views() {
       root.style.removeProperty('--bg-custom')
       root.style.removeProperty('--bg-size')
     }
-  }, [siteTitle, favicon, accent, accentCustom, bgStyle, bgImage, bgImageEnabled, monoIcons])
+  }, [siteTitle, favicon, accent, accentCustom, bgStyle, bgImage, bgImageEnabled, monoIcons, oledBlack])
 
   if (path === '/login') return <AuthPage />
   if (path === '/admin')

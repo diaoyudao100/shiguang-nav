@@ -5,6 +5,7 @@ import { SiteCard, Favicon } from './SiteCard'
 import { categoryIcon } from '../lib/categoryIcons'
 import { getClicks } from '../lib/clicks'
 import { IconEyeOff, IconPin, IconPlus, IconSearch, IconStickyNote, IconTrash } from './icons'
+import { EmptyArt } from './EmptyArt'
 import { useConfirm } from './Confirm'
 import { useToast } from './Toast'
 
@@ -114,11 +115,9 @@ export function Sections({ drag, setDrag, query, activeCat, sortMode, onEditSite
       <>
         <PanelSection header={<SectionHeader icon={<IconSearch width={14} height={14} />} label="搜索结果" count={hits.length} />}>
           {hits.length === 0 ? (
-            <div className="flex flex-col items-center rounded-2xl border border-dashed border-line-strong/60 px-6 py-14 text-center">
-              <span className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-accent-soft text-accent">
-                <IconSearch width={20} height={20} />
-              </span>
-              <p className="text-sm text-ink2">没有找到匹配的站点，试试切换到「站外」用搜索引擎查找</p>
+            <div className="flex flex-col items-center rounded-2xl border border-dashed border-line-strong/60 px-6 py-12 text-center">
+              <EmptyArt kind="search" />
+              <p className="mt-3 text-sm text-ink2">没有找到匹配的站点，试试切换到「站外」用搜索引擎查找</p>
             </div>
           ) : (
             <div className={gridCls}>{hits.map((s, i) => renderCard(s, s.categoryId, 'category', catName(s.categoryId), i))}</div>

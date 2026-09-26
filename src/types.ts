@@ -44,6 +44,7 @@ export interface Settings {
   sidebarCollapsed: boolean // 桌面端分类目录折叠为图标条
   autoCommon: boolean // 智能常用：置顶区自动追加点击频率最高的站点（点击数据仅存本机）
   monoIcons: boolean // 单色图标：favicon 转灰阶，悬浮恢复彩色（触屏保持单色）
+  oledBlack: boolean // OLED 纯黑：深色模式下背景压到纯黑
   searchEngine: string
   aiProvider: AiProvider
   aiBaseURL: string
