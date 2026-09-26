@@ -499,6 +499,27 @@ html[data-mono='1'] .card .icon-tile img {
   }
 }
 
+/* 卡片入场：按序淡入上浮（每张卡通过 --i 传序号，最多错开 14 档） */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.card-enter {
+  animation: card-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  animation-delay: calc(min(var(--i, 0), 14) * 40ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .card-enter {
+    animation: none;
+  }
+}
+
 /* 搜索命中高亮 */
 mark {
   border-radius: 3px;

@@ -65,6 +65,7 @@ interface CardProps {
   site: Site
   query?: string
   categoryChip?: string
+  enterIndex?: number // 入场动画序号：卡片按序淡入上浮（staggered）
   sortMode?: boolean
   isDragging?: boolean
   dropEdge?: 'top' | 'bottom' | null
@@ -79,6 +80,7 @@ export function SiteCard({
   site,
   query = '',
   categoryChip,
+  enterIndex,
   sortMode,
   isDragging,
   dropEdge,
@@ -152,7 +154,8 @@ export function SiteCard({
       onTouchCancel={cancelPress}
       onClickCapture={onClickCapture}
       onContextMenu={onContextMenu}
-      className={`group card relative z-0 min-w-0 p-3 transition-[height] hover:z-30 ${
+      style={enterIndex === undefined ? undefined : ({ '--i': enterIndex } as React.CSSProperties)}
+      className={`group card card-enter relative z-0 min-w-0 p-3 transition-[height] hover:z-30 ${
         sortMode ? 'cursor-grab border-accent/40 ring-1 ring-accent/25' : 'cursor-pointer'
       } ${isDragging || site.hidden ? 'opacity-60' : ''} ${dropEdge === 'top' ? 'drop-line-top' : ''} ${
         dropEdge === 'bottom' ? 'drop-line-bottom' : ''
