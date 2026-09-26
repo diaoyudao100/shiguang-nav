@@ -156,6 +156,8 @@ function defaultSettings(): Settings {
     gridDensity: '6',
     sidebarCollapsed: false,
     autoCommon: false,
+    monoIcons: false,
+    oledBlack: false,
     searchEngine: 'bing',
     aiProvider: 'openai',
     aiBaseURL: '',
