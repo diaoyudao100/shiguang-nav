@@ -4,6 +4,7 @@ import { useStore } from '../hooks/useStore'
 import { aiConfigured, aiDescribeSite } from '../lib/ai'
 import { faviconUrl, hostOf, isLikelyUrl, normalizeUrl } from '../lib/favicon'
 import { Field, Modal, compactCls, inputCls } from './Modal'
+import { SelectMenu } from './SelectMenu'
 import { IconChevronDown, IconChevronUp, IconEyeOff, IconImage, IconPin, IconSparkles, IconTrash, IconUpload } from './icons'
 import { useToast } from './Toast'
 import { useConfirm } from './Confirm'
@@ -361,21 +362,20 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
                 </button>
               </>
             )}
-            <select
-              className={compactCls + ' ms-auto h-8 min-w-[90px] flex-1 text-xs leading-[30px] sm:h-9 sm:leading-[34px]'}
+            <SelectMenu
+              variant="compact"
+              ariaLabel="分类"
               value={form.categoryId}
-              onChange={(e) => set({ categoryId: e.target.value })}
-              aria-label="分类"
-            >
-              {form.categoryId && !data.categories.some((c) => c.id === form.categoryId) && (
-                <option value={form.categoryId}>{form.categoryId}</option>
-              )}
-              {data.categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => set({ categoryId: v })}
+              className="ms-auto h-8 min-w-[90px] flex-1 text-xs sm:h-9"
+              options={[
+                ...data.categories.map((c) => ({ value: c.id, label: c.name })),
+                // 历史数据兜底：categoryId 不在现有分类里时保住显示
+                ...(form.categoryId && !data.categories.some((c) => c.id === form.categoryId)
+                  ? [{ value: form.categoryId, label: form.categoryId }]
+                  : []),
+              ]}
+            />
           </div>
         </div>
 

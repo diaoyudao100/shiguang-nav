@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../hooks/useStore'
 import { useTheme } from '../hooks/useTheme'
 import { useAuth } from '../hooks/useAuth'
-import { generateLetterIcon } from '../lib/favicon'
+import { generateLetterIcon, faviconUrl } from '../lib/favicon'
 import { api } from '../lib/api'
 import { Field, Modal, compactCls, inputCls } from './Modal'
+import { SelectMenu } from './SelectMenu'
 import { BrandLogo } from './BrandLogo'
 import { useToast } from './Toast'
 import { useConfirm } from './Confirm'
@@ -448,17 +449,18 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
 
           {/* 默认搜索引擎 */}
           <Field label="默认搜索引擎">
-            <select
-              className={inputCls}
+            <SelectMenu
+              ariaLabel="默认搜索引擎"
               value={form.searchEngine}
-              onChange={(e) => setForm({ ...form, searchEngine: e.target.value })}
-            >
-              <option value="bing">必应</option>
-              <option value="google">Google</option>
-              <option value="baidu">百度</option>
-              <option value="duckduckgo">DuckDuckGo</option>
-              <option value="github">GitHub</option>
-            </select>
+              onChange={(v) => setForm({ ...form, searchEngine: v })}
+              options={[
+                { value: 'bing', label: '必应', icon: <img src={faviconUrl('https://bing.com')} alt="" className="h-4 w-4 rounded-sm" /> },
+                { value: 'google', label: 'Google', icon: <img src={faviconUrl('https://google.com')} alt="" className="h-4 w-4 rounded-sm" /> },
+                { value: 'baidu', label: '百度', icon: <img src={faviconUrl('https://baidu.com')} alt="" className="h-4 w-4 rounded-sm" /> },
+                { value: 'duckduckgo', label: 'DuckDuckGo', icon: <img src={faviconUrl('https://duckduckgo.com')} alt="" className="h-4 w-4 rounded-sm" /> },
+                { value: 'github', label: 'GitHub', icon: <img src={faviconUrl('https://github.com')} alt="" className="h-4 w-4 rounded-sm" /> },
+              ]}
+            />
           </Field>
 
           {/* 网址卡片显示 */}
@@ -545,11 +547,11 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
           <div className="grid grid-cols-2 gap-3">
             <label className="block">
               <span className="mb-1.5 block text-xs font-medium text-ink2">AI 提供商</span>
-              <select
-                className={inputCls}
+              <SelectMenu
+                ariaLabel="AI 提供商"
                 value={form.aiProvider}
-                onChange={(e) => {
-                  const provider = e.target.value as Settings['aiProvider']
+                onChange={(v) => {
+                  const provider = v as Settings['aiProvider']
                   const otherDefault = provider === 'openai' ? 'gemini-2.0-flash' : 'gpt-4o-mini'
                   setForm((f) => ({
                     ...f,
@@ -557,10 +559,11 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
                     aiModel: !f.aiModel || MODEL_SUGGESTIONS.includes(f.aiModel) ? (provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.0-flash') : f.aiModel === otherDefault ? (provider === 'openai' ? 'gpt-4o-mini' : 'gemini-2.0-flash') : f.aiModel,
                   }))
                 }}
-              >
-                <option value="openai">OpenAI Compatible</option>
-                <option value="gemini">Google Gemini</option>
-              </select>
+                options={[
+                  { value: 'openai', label: 'OpenAI Compatible' },
+                  { value: 'gemini', label: 'Google Gemini' },
+                ]}
+              />
             </label>
             <div className="block">
               <span className="mb-1.5 block text-xs font-medium text-ink2">模型名称</span>
@@ -661,11 +664,16 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
         <div className="flex flex-col gap-3.5">
           {/* 主题模式 */}
           <Field label="主题模式">
-            <select className={inputCls} value={form.theme} onChange={(e) => applyTheme(e.target.value as ThemeMode)}>
-              <option value="light">浅色</option>
-              <option value="dark">深色</option>
-              <option value="system">跟随系统</option>
-            </select>
+            <SelectMenu
+              ariaLabel="主题模式"
+              value={form.theme}
+              onChange={(v) => applyTheme(v as ThemeMode)}
+              options={[
+                { value: 'light', label: '浅色' },
+                { value: 'dark', label: '深色' },
+                { value: 'system', label: '跟随系统' },
+              ]}
+            />
           </Field>
 
           {/* 主题色调 */}
@@ -984,18 +992,20 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
                     placeholder="自定义连接码（≥8 位），留空则随机"
                     className={compactCls + ' h-9 min-w-0 flex-1 text-xs'}
                   />
-                  <select
+                  <SelectMenu
+                    variant="compact"
+                    ariaLabel="连接码有效时长"
                     value={tokenDuration}
-                    onChange={(e) => setTokenDuration(e.target.value)}
-                    className={compactCls + ' h-9 w-[104px] leading-[34px]'}
-                    aria-label="连接码有效时长"
-                  >
-                    <option value="365">1 年有效</option>
-                    <option value="1825">5 年有效</option>
-                    <option value="3650">10 年有效</option>
-                    <option value="7300">20 年有效</option>
-                    <option value="0">长期有效</option>
-                  </select>
+                    onChange={(v) => setTokenDuration(v)}
+                    className="w-[104px] shrink-0"
+                    options={[
+                      { value: '365', label: '1 年有效' },
+                      { value: '1825', label: '5 年有效' },
+                      { value: '3650', label: '10 年有效' },
+                      { value: '7300', label: '20 年有效' },
+                      { value: '0', label: '长期有效' },
+                    ]}
+                  />
                   <button
                     type="button"
                     onClick={genDeviceToken}
