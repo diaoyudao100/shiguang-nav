@@ -38,6 +38,8 @@ interface StoreCtx {
   moveCategory: (id: string, dir: -1 | 1) => void
   /** 拖拽落点：把站点移动到某个分类网格的 anchor 之前/之后（或末尾） */
   dropSite: (dragId: string, targetCategoryId: string, anchorId: string | null, after: boolean) => void
+  /** 站点在同分类内前移/后移一位（触屏端排序入口，与拖拽排序同序） */
+  moveSite: (id: string, dir: -1 | 1) => void
   setSettings: (patch: Partial<Settings>) => void
   replaceAll: (data: NavData) => void
   mergeImport: (categories: Category[], sites: Site[]) => void
@@ -48,7 +50,9 @@ interface StoreCtx {
   toggleNotePin: (id: string) => void
   deleteNote: (id: string) => void
   restoreTrash: (id: string) => void
+  restoreAllTrash: () => void
   purgeTrashItem: (id: string) => void
+  emptyTrash: () => void
   forceSync: () => void
 }
 
@@ -393,6 +397,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           d.sites.splice(insertAt, 0, dragged)
           return d
         }),
+      moveSite: (id, dir) =>
+        mutate((d) => {
+          const idx = d.sites.findIndex((x) => x.id === id)
+          if (idx < 0) return d
+          const catId = d.sites[idx].categoryId
+          const sameCat = d.sites.map((s, i) => ({ s, i })).filter((x) => x.s.categoryId === catId)
+          const pos = sameCat.findIndex((x) => x.i === idx)
+          const neighbor = sameCat[pos + dir]
+          if (!neighbor) return d
+          const [moved] = d.sites.splice(idx, 1)
+          const insertAt = d.sites.findIndex((x) => x.id === neighbor.s.id)
+          d.sites.splice(dir === -1 ? insertAt : insertAt + 1, 0, moved)
+          return d
+        }),
       setSettings: (patch) =>
         mutate((d) => {
           d.settings = { ...d.settings, ...patch }
@@ -481,6 +499,27 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       purgeTrashItem: (id) =>
         mutate((d) => {
           d.trash = (d.trash ?? []).filter((t) => t.data.id !== id)
+          return d
+        }),
+      restoreAllTrash: () =>
+        mutate((d) => {
+          for (const item of d.trash ?? []) {
+            if (item.kind === 'site') {
+              const s = item.data as Site
+              s.categoryId = d.categories.some((c) => c.id === s.categoryId)
+                ? s.categoryId
+                : d.categories[0]?.id ?? ''
+              d.sites.push(s)
+            } else {
+              d.categories.push(item.data as Category)
+            }
+          }
+          d.trash = []
+          return d
+        }),
+      emptyTrash: () =>
+        mutate((d) => {
+          d.trash = []
           return d
         }),
       forceSync: () => {
