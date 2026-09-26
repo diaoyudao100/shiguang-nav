@@ -188,6 +188,12 @@ html::before {
   mask-image: linear-gradient(to bottom, black, transparent 460px);
 }
 
+/* 禁止移动浏览器自动放大字体（font boosting 会把弹窗等布局撑爆） */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   background-image: var(--bg-custom, var(--aurora));
   background-repeat: no-repeat;
@@ -313,6 +319,19 @@ select:focus-visible {
   }
   .dark .modal-card {
     background: color-mix(in srgb, var(--c-surface) 88%, transparent);
+  }
+  /* 弹窗高度上限：dvh = 移动浏览器"真正可见"的高度（自动扣除工具栏），
+     vh 作旧浏览器回退。手机端 92vh 会比可视区高，导致关闭/保存按钮被裁掉 */
+  .modal-shell {
+    max-height: 92vh;
+    max-height: 92dvh;
+  }
+  /* 小屏：弹窗贴边全高（配合遮罩 p-2），标题/关闭在顶栏、保存固定在底栏恒定可见 */
+  @media (max-width: 639.98px) {
+    .modal-shell {
+      max-height: calc(100vh - 1rem);
+      max-height: calc(100dvh - 1rem);
+    }
   }
   .glass-header {
     background: color-mix(in srgb, var(--c-base) 72%, transparent);
@@ -459,9 +478,13 @@ select:focus-visible {
     transform: translateY(-2px);
     transition: opacity 0.16s ease, transform 0.16s ease;
   }
-  .group:hover .card-actions {
-    opacity: 1;
-    transform: none;
+  /* 仅在主输入可悬停的设备（PC）悬浮显示齿轮；手机浏览器的触摸会产生
+     「粘性 hover」，不限定 hover:hover 的话摸一下卡片齿轮就会冒出来 */
+  @media (hover: hover) {
+    .group:hover .card-actions {
+      opacity: 1;
+      transform: none;
+    }
   }
 }
 

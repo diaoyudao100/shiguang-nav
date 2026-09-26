@@ -65,14 +65,14 @@ export function Modal({
   // Portal 到 body：毛玻璃/变形等祖先会劫持 fixed 定位（包含块规则），挂 body 上保证屏幕居中
   return createPortal(
     <div
-      className="anim-fade fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm"
+      className="anim-fade fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-2 backdrop-blur-sm sm:p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget && data.settings.maskClosable) onClose()
       }}
     >
       <div
         ref={dialogRef}
-        className={`modal-card anim-pop flex max-h-[92vh] w-full flex-col overflow-hidden rounded-[22px] ${width}`}
+        className={`modal-card modal-shell anim-pop flex w-full flex-col overflow-hidden rounded-2xl sm:rounded-[22px] ${width}`}
         role="dialog"
         aria-modal="true"
       >
