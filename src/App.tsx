@@ -186,7 +186,7 @@ function Shell() {
 function Views() {
   const path = usePath()
   const { data } = useStore()
-  const { siteTitle, favicon, accent, accentCustom, bgStyle, bgImage, bgImageEnabled } = data.settings
+  const { siteTitle, favicon, accent, accentCustom, bgStyle, bgImage, bgImageEnabled, monoIcons } = data.settings
 
   // 网页标题、站点图标、强调色与背景跟随设置
   useEffect(() => {
@@ -213,6 +213,10 @@ function Views() {
     if (bgStyle && bgStyle !== 'zinc') root.dataset.bg = bgStyle
     else root.removeAttribute('data-bg')
 
+    // 单色图标模式：favicon 灰阶，悬浮恢复彩色
+    if (monoIcons) root.dataset.mono = '1'
+    else root.removeAttribute('data-mono')
+
     if (bgImageEnabled && bgImage?.trim()) {
       const scrim = 'color-mix(in srgb, var(--c-base) 60%, transparent)'
       root.style.setProperty(
@@ -224,7 +228,7 @@ function Views() {
       root.style.removeProperty('--bg-custom')
       root.style.removeProperty('--bg-size')
     }
-  }, [siteTitle, favicon, accent, accentCustom, bgStyle, bgImage, bgImageEnabled])
+  }, [siteTitle, favicon, accent, accentCustom, bgStyle, bgImage, bgImageEnabled, monoIcons])
 
   if (path === '/login') return <AuthPage />
   if (path === '/admin') return <AdminPage />

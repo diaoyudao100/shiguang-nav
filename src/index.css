@@ -255,6 +255,17 @@ select:focus-visible {
   }
 }
 
+/* 单色图标模式：favicon 转灰阶压低色彩噪音，悬浮时恢复彩色（触屏无 hover 保持单色） */
+html[data-mono='1'] .card .icon-tile img {
+  filter: grayscale(1) contrast(1.05);
+  transition: filter 0.25s ease;
+}
+@media (hover: hover) {
+  html[data-mono='1'] .card:hover .icon-tile img {
+    filter: none;
+  }
+}
+
 /* ============================================================
    组件类
    ============================================================ */

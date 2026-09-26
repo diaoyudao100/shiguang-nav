@@ -21,6 +21,7 @@ export const DEFAULT_SETTINGS: Settings = {
   gridDensity: '6',
   sidebarCollapsed: false,
   autoCommon: false,
+  monoIcons: false,
   searchEngine: 'bing',
   aiProvider: 'openai',
   aiBaseURL: '',
@@ -177,6 +178,7 @@ export function migrate(data: Partial<NavData>): NavData {
     : '6'
   settings.sidebarCollapsed = !!settings.sidebarCollapsed
   settings.autoCommon = !!settings.autoCommon
+  settings.monoIcons = !!settings.monoIcons
   const notes: Note[] = Array.isArray(data.notes)
     ? data.notes
         .filter((n) => n && typeof n.text === 'string')
