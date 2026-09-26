@@ -48,8 +48,9 @@ export function AccountMenu() {
 
   if (!user) {
     return (
-      <button onClick={() => navigate('/login')} className="btn-ghost h-10">
-        登录 / 注册
+      <button onClick={() => navigate('/login')} className="btn-ghost h-9 whitespace-nowrap px-3 text-xs sm:h-10 sm:px-4 sm:text-[13px]">
+        <span className="sm:hidden">登录</span>
+        <span className="hidden sm:inline">登录 / 注册</span>
       </button>
     )
   }

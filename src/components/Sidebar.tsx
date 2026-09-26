@@ -107,7 +107,7 @@ export function Sidebar({
     <>
       {mobileOpen && <div className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden" onClick={() => onCloseMobile()} />}
       <aside
-        className={`relative fixed inset-y-0 left-0 z-30 flex w-64 shrink-0 flex-col p-3 transition-all duration-300 md:sticky md:top-16 md:z-0 md:h-[calc(100vh-4rem)] md:translate-x-0 md:p-3.5 ${
+        className={`fixed inset-y-0 left-0 z-30 flex w-64 shrink-0 flex-col p-3 transition-transform duration-300 md:sticky md:top-16 md:z-0 md:h-[calc(100vh-4rem)] md:translate-x-0 md:p-3.5 ${
           mobileOpen ? 'translate-x-0' : '-translate-x-full'
         } ${collapsed ? 'md:w-[76px]' : ''}`}
       >

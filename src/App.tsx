@@ -92,9 +92,9 @@ function Shell() {
           mobileOpen={sidebarOpen}
           onCloseMobile={() => setSidebarOpen(false)}
         />
-        <main className="min-w-0 flex-1 px-5 pb-6 pt-6 md:px-7 md:pt-3.5">
+        <main className="min-w-0 flex-1 px-4 pb-6 pt-4 sm:px-5 sm:pt-6 md:px-7 md:pt-3.5">
           {/* 移动端：顶栏不放搜索，正文顶部保留 */}
-          <div className="mb-7 md:hidden">
+          <div className="mb-5 md:hidden">
             <SearchBar scope={scope} setScope={setScope} query={query} setQuery={setQuery} />
           </div>
 

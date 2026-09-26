@@ -89,7 +89,7 @@ function ThemeSwitch() {
         onClick={() => setOpen((v) => !v)}
         title={`主题：${current.title}（点击切换）`}
         aria-label="切换主题"
-        className="flex h-8 w-8 items-center justify-center rounded-[9px] text-ink2 transition-colors hover:bg-hover hover:text-ink"
+        className="flex h-7 w-7 items-center justify-center rounded-[8px] text-ink2 transition-colors hover:bg-hover hover:text-ink sm:h-8 sm:w-8 sm:rounded-[9px]"
       >
         <current.icon width={15} height={15} />
       </button>
@@ -135,19 +135,23 @@ export function Header({ onAdd, onSettings, onToggleSidebar, sortMode, onToggleS
   const brand = data.settings.siteTitle?.trim() || '拾光导航'
   return (
     <header className="glass-header sticky top-0 z-40">
-      <div className="flex h-16 items-center gap-3 px-5 md:px-6">
+      <div className="flex h-16 items-center gap-2 px-3 sm:gap-3 sm:px-5 md:px-6">
         <button
           onClick={onToggleSidebar}
-          className="rounded-lg p-2 text-ink2 transition-colors hover:bg-hover hover:text-ink md:hidden"
+          className="shrink-0 rounded-lg p-1.5 text-ink2 transition-colors hover:bg-hover hover:text-ink sm:p-2 md:hidden"
           aria-label="打开菜单"
         >
           <IconMenu width={18} height={18} />
         </button>
 
-        <div className="flex shrink-0 items-center gap-3">
-          <BrandLogo boxCls="h-10 w-10 rounded-[13px]" letterCls="text-[18px]" title={brand} />
-          <div className="leading-tight">
-            <div className="text-[18px] font-semibold tracking-tight">{brand}</div>
+        <div className="flex min-w-0 shrink items-center gap-2.5 sm:gap-3">
+          <BrandLogo
+            boxCls="h-9 w-9 rounded-[12px] sm:h-10 sm:w-10 sm:rounded-[13px]"
+            letterCls="text-[16px] sm:text-[18px]"
+            title={brand}
+          />
+          <div className="min-w-0 leading-tight">
+            <div className="truncate text-[16px] font-semibold tracking-tight sm:text-[18px]">{brand}</div>
             <div className="mt-0.5 hidden text-[11px] tracking-[0.28em] text-ink2/75 xl:block">
               个人网址导航
             </div>
@@ -163,14 +167,14 @@ export function Header({ onAdd, onSettings, onToggleSidebar, sortMode, onToggleS
           <SearchBar compact scope={search.scope} setScope={search.setScope} query={search.query} setQuery={search.setQuery} />
         </div>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
           <SyncChip />
-          {/* 三模块：主题 / 排序 / 设置，整体由一张卡包裹 */}
-          <div className="flex h-10 items-center gap-0.5 rounded-[13px] border border-line bg-surface/70 p-1 shadow-sm">
+          {/* 三模块：主题 / 排序 / 设置，整体由一张卡包裹（排序为拖拽功能，触屏无 hover 拖拽，小屏隐藏） */}
+          <div className="flex h-9 items-center gap-0.5 rounded-[11px] border border-line bg-surface/70 p-0.5 shadow-sm sm:h-10 sm:rounded-[13px] sm:p-1">
             <ThemeSwitch />
             <button
               onClick={onToggleSort}
-              className={`flex h-8 w-8 items-center justify-center rounded-[9px] transition-colors ${
+              className={`hidden h-7 w-7 items-center justify-center rounded-[8px] transition-colors sm:flex sm:h-8 sm:w-8 sm:rounded-[9px] ${
                 sortMode ? 'bg-accent-soft text-accent' : 'text-ink2 hover:bg-hover hover:text-ink'
               }`}
               aria-pressed={sortMode}
@@ -181,7 +185,7 @@ export function Header({ onAdd, onSettings, onToggleSidebar, sortMode, onToggleS
             </button>
             <button
               onClick={onSettings}
-              className="flex h-8 w-8 items-center justify-center rounded-[9px] text-ink2 transition-colors hover:bg-hover hover:text-ink"
+              className="flex h-7 w-7 items-center justify-center rounded-[8px] text-ink2 transition-colors hover:bg-hover hover:text-ink sm:h-8 sm:w-8 sm:rounded-[9px]"
               aria-label="设置"
               title="设置"
             >
@@ -190,14 +194,15 @@ export function Header({ onAdd, onSettings, onToggleSidebar, sortMode, onToggleS
           </div>
           {user ? (
             <>
-              <span className="h-5 w-px bg-line" />
+              <span className="hidden h-5 w-px bg-line sm:block" />
               <AccountMenu />
             </>
           ) : (
             <AccountMenu />
           )}
-          <button onClick={onAdd} className="btn-primary h-10 px-5">
-            <IconPlus width={14} height={14} /> 添加
+          <button onClick={onAdd} className="btn-primary h-9 px-3 sm:h-10 sm:px-5" aria-label="添加">
+            <IconPlus width={14} height={14} />
+            <span className="hidden sm:inline">添加</span>
           </button>
         </div>
       </div>
