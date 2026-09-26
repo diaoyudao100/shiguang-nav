@@ -117,17 +117,7 @@ export function SelectMenu({ value, onChange, options, variant = 'input', classN
     popupRef.current?.children[active]?.scrollIntoView({ block: 'nearest' })
   }, [active, open])
 
-  // 打开时点击外部关闭
-  useEffect(() => {
-    if (!open) return
-    const onDown = (e: MouseEvent) => {
-      const t = e.target as Node
-      if (triggerRef.current?.contains(t) || popupRef.current?.contains(t)) return
-      setOpen(false)
-    }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
+  // 点击外部关闭由全屏遮罩层的 onClick 处理（见弹层 JSX）——遮罩会吞掉那次点击，避免误触下层控件
 
   const pick = (v: string) => {
     onChange(v)
@@ -164,7 +154,12 @@ export function SelectMenu({ value, onChange, options, variant = 'input', classN
       {open &&
         pos &&
         createPortal(
-          <div className="fixed inset-0 z-[80]" onMouseDown={(e) => e.stopPropagation()}>
+          /* 遮罩层：点击空白处（遮罩本身）关闭下拉；选项面板拦截 mousedown 防止误关 */
+          <div
+            className="fixed inset-0 z-[80]"
+            onClick={() => setOpen(false)}
+            onContextMenu={(e) => e.preventDefault()}
+          >
             <div
               ref={popupRef}
               role="listbox"
@@ -174,6 +169,7 @@ export function SelectMenu({ value, onChange, options, variant = 'input', classN
                 width: pos.width,
                 ...(pos.top !== undefined ? { top: pos.top } : { bottom: pos.bottom }),
               }}
+              onMouseDown={(e) => e.stopPropagation()}
             >
               {options.map((o, i) => {
                 const isSelected = o.value === value
