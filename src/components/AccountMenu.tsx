@@ -1,12 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api'
 import { useAuth } from '../hooks/useAuth'
 import { useStore } from '../hooks/useStore'
 import { navigate } from '../lib/router'
 import { Field, Modal, inputCls } from './Modal'
-import { NotesModal } from './NotesModal'
-import { OnboardingModal } from './OnboardingCard'
 import { useToast } from './Toast'
+
+// 便签随记 / 快速上手按需加载：拆出主包（首次打开才拉取）
+const NotesModal = lazy(() => import('./NotesModal').then((m) => ({ default: m.NotesModal })))
+const OnboardingModal = lazy(() => import('./OnboardingCard').then((m) => ({ default: m.OnboardingModal })))
 
 export function AccountMenu() {
   const { user, setUser, refresh } = useAuth()
@@ -200,9 +202,13 @@ export function AccountMenu() {
         </form>
       </Modal>
 
-      <NotesModal open={notesOpen} onClose={() => setNotesOpen(false)} initialId={pendingNoteId} />
+      <Suspense fallback={null}>
+        <NotesModal open={notesOpen} onClose={() => setNotesOpen(false)} initialId={pendingNoteId} />
+      </Suspense>
 
-      <OnboardingModal open={onboardingOpen} onClose={() => setOnboardingOpen(false)} />
+      <Suspense fallback={null}>
+        <OnboardingModal open={onboardingOpen} onClose={() => setOnboardingOpen(false)} />
+      </Suspense>
 
       <Modal open={pwdModal} title="修改密码" onClose={() => setPwdModal(false)} width="max-w-xs">
         <form

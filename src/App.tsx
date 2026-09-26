@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { StoreProvider, useStore } from './hooks/useStore'
 import { ThemeProvider } from './hooks/useTheme'
 import { usePath } from './lib/router'
@@ -14,9 +14,11 @@ import { DataModal } from './components/DataModal'
 import { SettingsModal, type Tab } from './components/SettingsModal'
 import { IconGlobe } from './components/icons'
 import { AuthPage } from './pages/AuthPage'
-import { AdminPage } from './pages/AdminPage'
 import { useToast } from './components/Toast'
 import type { Site } from './types'
+
+// 管理后台按需加载：首屏用不到，拆出主包
+const AdminPage = lazy(() => import('./pages/AdminPage').then((m) => ({ default: m.AdminPage })))
 
 interface LinkModalState {
   open: boolean
@@ -231,7 +233,12 @@ function Views() {
   }, [siteTitle, favicon, accent, accentCustom, bgStyle, bgImage, bgImageEnabled, monoIcons])
 
   if (path === '/login') return <AuthPage />
-  if (path === '/admin') return <AdminPage />
+  if (path === '/admin')
+    return (
+      <Suspense fallback={null}>
+        <AdminPage />
+      </Suspense>
+    )
   return <Shell />
 }
 
