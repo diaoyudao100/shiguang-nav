@@ -1016,7 +1016,7 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
               />
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{form.siteTitle || '拾光导航'}</div>
-                <div className="mt-0.5 text-xs text-ink2">v2.4.0 · 个人网址导航</div>
+                <div className="mt-0.5 text-xs text-ink2">v2.5.0 · 个人网址导航</div>
               </div>
               <a
                 href="https://github.com/diaoyudao100/shiguang-nav"
