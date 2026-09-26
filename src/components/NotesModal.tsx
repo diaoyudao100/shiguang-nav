@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Note } from '../types'
 import { useStore } from '../hooks/useStore'
 import { Modal } from './Modal'
-import { IconPin, IconPlus, IconStickyNote, IconTrash } from './icons'
+import { IconChevronLeft, IconPin, IconPlus, IconStickyNote, IconTrash } from './icons'
 import { useToast } from './Toast'
 import { useConfirm } from './Confirm'
 
@@ -41,6 +41,8 @@ export function NotesModal({
   const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [noteQuery, setNoteQuery] = useState('')
   const [onlyPinned, setOnlyPinned] = useState(false)
+  /** 移动端（<md）单栏切换：list=便签列表，editor=编辑器；桌面双栏常显不受影响 */
+  const [mobilePane, setMobilePane] = useState<'list' | 'editor'>('list')
   const pendingFocus = useRef<string | null>(null)
   const freshBlankId = useRef<string | null>(null) // 刚新建、允许暂时为空的那条
   const titleRef = useRef<HTMLInputElement>(null)
@@ -81,11 +83,17 @@ export function NotesModal({
     }
   }, [selectedId, open])
 
+  // 打开弹窗：移动端默认落在列表页（下方 initialId 效果可能再切到编辑器）
+  useEffect(() => {
+    if (open) setMobilePane('list')
+  }, [open])
+
   // 站内搜索点击便签结果：打开后定位到对应便签
   useEffect(() => {
     if (open && initialId && notes.some((n) => n.id === initialId)) {
       setSelectedId(initialId)
       setMode('edit')
+      setMobilePane('editor')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialId])
@@ -104,6 +112,7 @@ export function NotesModal({
     freshBlankId.current = n.id
     pendingFocus.current = n.id
     setSelectedId(n.id)
+    setMobilePane('editor')
   }
 
   // 切换选中：离开的若是空白便签（放弃输入），直接丢弃
@@ -116,12 +125,14 @@ export function NotesModal({
       }
     }
     setSelectedId(id)
+    setMobilePane('editor')
   }
 
   // 关闭面板：所有空白便签（含刚新建未写的）全部丢弃
   const handleClose = () => {
     for (const n of data.notes ?? []) if (isBlank(n)) deleteNote(n.id)
     freshBlankId.current = null
+    setMobilePane('list')
     onClose()
   }
 
@@ -146,6 +157,7 @@ export function NotesModal({
     if (!ok) return
     deleteNote(note.id)
     if (freshBlankId.current === note.id) freshBlankId.current = null
+    setMobilePane('list')
     toast('便签已删除')
   }
 
@@ -163,10 +175,12 @@ export function NotesModal({
         </span>
       }
     >
-      {/* 双栏：左列表 / 右编辑 */}
-      <div className="flex h-[460px] overflow-hidden rounded-2xl border border-line bg-base/40">
+      {/* 双栏：左列表 / 右编辑（移动端单栏全屏切换：列表 ↔ 编辑器） */}
+      <div className="flex h-[460px] max-h-[calc(100dvh-9rem)] overflow-hidden rounded-2xl border border-line bg-base/40">
         {/* 左侧：新建 + 搜索 + 标题列表 */}
-        <div className="flex w-56 shrink-0 flex-col border-r border-line md:w-60">
+        <div
+          className={`${mobilePane === 'list' ? 'flex' : 'hidden'} w-full shrink-0 flex-col border-line md:flex md:w-56 md:border-r lg:w-60`}
+        >
           <div className="shrink-0 space-y-1.5 p-2 pb-1.5">
             <button
               type="button"
@@ -243,7 +257,7 @@ export function NotesModal({
         </div>
 
         {/* 右侧：编辑 / 预览 */}
-        <div className="flex min-w-0 flex-1 flex-col p-3">
+        <div className={`${mobilePane === 'editor' ? 'flex' : 'hidden'} min-w-0 flex-1 flex-col p-3 md:flex`}>
           {selected ? (
             <>
               <input
@@ -261,6 +275,14 @@ export function NotesModal({
                 className="w-full truncate rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink outline-none transition-colors placeholder:text-ink2/40 focus:border-accent/50 focus:ring-4 focus:ring-accent/10"
               />
               <div className="mt-2.5 flex items-center gap-1.5">
+                <button
+                  type="button"
+                  aria-label="返回列表"
+                  onClick={() => setMobilePane('list')}
+                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-line bg-surface text-ink2 transition-colors hover:text-ink md:hidden"
+                >
+                  <IconChevronLeft width={14} height={14} />
+                </button>
                 <button
                   type="button"
                   onClick={() => setMode('edit')}
