@@ -39,14 +39,16 @@ function PillToggle({
     <button
       type="button"
       onClick={onClick}
-      className={`flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border px-3 text-xs font-medium transition-all ${
+      aria-label={label}
+      title={label}
+      className={`flex h-9 w-9 items-center justify-center gap-1.5 whitespace-nowrap rounded-full border text-xs font-medium transition-all sm:w-auto sm:px-3 ${
         active
           ? 'border-accent/40 bg-accent-soft text-accent'
           : 'border-line bg-surface text-ink2 hover:border-line-strong hover:text-ink'
       }`}
     >
       {icon}
-      {label}
+      <span className="hidden sm:inline">{label}</span>
     </button>
   )
 }
@@ -302,7 +304,7 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
       >
         {/* 操作组卡：置顶 / 隐藏 / 删除 / 前移 / 后移 / 分类（窄屏自动换行） */}
         <div className="rounded-2xl border border-line bg-base/40 p-2">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <PillToggle
               active={form.pinned}
               onClick={() => set({ pinned: !form.pinned, hidden: form.pinned ? form.hidden : false })}
@@ -319,10 +321,12 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
               <button
                 type="button"
                 onClick={remove}
-                className="flex h-9 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-3 text-xs font-medium text-ink2 transition-all hover:border-danger/40 hover:text-danger"
+                aria-label="删除"
+                title="删除"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink2 transition-all hover:border-danger/40 hover:text-danger sm:w-auto sm:px-3"
               >
                 <IconTrash width={13} height={13} />
-                删除
+                <span className="hidden sm:inline">删除</span>
               </button>
             )}
             {isEdit && (
@@ -356,7 +360,7 @@ export function LinkModal({ open, site, defaultCategoryId, presetCategoryName, o
               </>
             )}
             <select
-              className={compactCls + ' ms-auto h-9 w-28 text-xs leading-[34px]'}
+              className={compactCls + ' ms-auto h-9 w-[88px] text-xs leading-[34px] sm:w-28'}
               value={form.categoryId}
               onChange={(e) => set({ categoryId: e.target.value })}
               aria-label="分类"
