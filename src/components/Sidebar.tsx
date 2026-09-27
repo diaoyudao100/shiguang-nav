@@ -116,7 +116,9 @@ export function Sidebar({
           onClick={toggleCollapsed}
           title={collapsed ? '展开分类目录' : '收起分类目录'}
           aria-label={collapsed ? '展开分类目录' : '收起分类目录'}
-          className="absolute right-0.5 top-1/2 z-20 hidden h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-ink2 shadow-sm transition-colors hover:text-accent md:flex"
+          className={`absolute top-1/2 z-20 hidden h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface text-ink2 shadow-sm transition-colors hover:text-accent md:flex ${
+            collapsed ? '-right-2.5' : 'right-0.5'
+          }`}
         >
           {collapsed ? <IconChevronRight width={12} height={12} /> : <IconChevronLeft width={12} height={12} />}
         </button>
