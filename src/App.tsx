@@ -14,6 +14,7 @@ import { DataModal } from './components/DataModal'
 import { SettingsModal, type Tab } from './components/SettingsModal'
 import { TodoBanner } from './components/TodoBanner'
 import { TodosModal } from './components/TodosModal'
+import { CommandPalette } from './components/CommandPalette'
 import { useTodoReminders } from './hooks/useTodoReminders'
 import { EmptyArt } from './components/EmptyArt'
 import { AuthPage } from './pages/AuthPage'
@@ -44,6 +45,7 @@ function Shell() {
   const [settingsModal, setSettingsModal] = useState(false)
   const [settingsTab, setSettingsTab] = useState<Tab | null>(null)
   const [todosOpen, setTodosOpen] = useState(false)
+  const [paletteOpen, setPaletteOpen] = useState(false)
   /** 滚动到底部时取消内容区底部渐隐 */
   const [atBottom, setAtBottom] = useState(true)
   const { items: bannerItems, complete, snooze, dismiss } = useTodoReminders()
@@ -63,6 +65,18 @@ function Shell() {
       )
         return
       setTodosOpen(true)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // 快捷键 Ctrl/Cmd+K：万能框
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault()
+        setPaletteOpen((v) => !v)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -210,7 +224,7 @@ function Shell() {
               </a>
             </div>
             <p className="mt-4 text-center text-[11px] tracking-wide text-ink2/50">
-              {data.settings.siteTitle?.trim() || '拾光导航'} · v2.8.0 · 本地优先，数据尽在掌控
+              {data.settings.siteTitle?.trim() || '拾光导航'} · v2.9.0 · 本地优先，数据尽在掌控
             </p>
           </footer>
         </main>
@@ -232,6 +246,7 @@ function Shell() {
         />
       )}
       <TodosModal open={todosOpen} onClose={() => setTodosOpen(false)} />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} onAddLink={() => openAdd(null)} />
       <CategoryModal open={catModal} onClose={() => setCatModal(false)} />
       <DataModal open={dataModal} onClose={() => setDataModal(false)} />
       <SettingsModal

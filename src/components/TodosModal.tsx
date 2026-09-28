@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlarmClock, Bell, CalendarClock, Check, ListTodo, Pencil, Plus, Trash2, Trash } from 'lucide-react'
+import { AlarmClock, Bell, CalendarClock, Check, ListTodo, Pencil, Plus, Sparkles, Trash2, Trash } from 'lucide-react'
 import type { Todo } from '../types'
 import { useStore } from '../hooks/useStore'
 import { Modal, inputCls } from './Modal'
@@ -7,6 +7,7 @@ import { SelectMenu } from './SelectMenu'
 import { useToast } from './Toast'
 import { useConfirm } from './Confirm'
 import { REPEAT_OPTS, nextRemindAt, normalizeRepeatDays, repeatBadgeText } from '../lib/todo'
+import { aiConfigured, aiParseTodo } from '../lib/ai'
 
 const MAX_TITLE = 60
 const MAX_NOTE = 200
@@ -95,6 +96,32 @@ export function TodosModal({ open, onClose }: { open: boolean; onClose: () => vo
     [todos],
   )
   const isOverdue = (t: Todo) => !t.done && t.remindAt <= Date.now()
+
+  /** AI 解析：把输入框里的一句自然语言填充到表单（不直接创建，用户确认后手动添加） */
+  const [aiParsing, setAiParsing] = useState(false)
+  const aiFill = async () => {
+    const q = title.trim()
+    if (!q) {
+      toast('先在输入框写一句话（如下周五下午3点复诊），再点 AI 解析')
+      return
+    }
+    if (!aiConfigured(data.settings)) {
+      toast('请先在 设置 → AI 助手 中配置 API KEY')
+      return
+    }
+    setAiParsing(true)
+    const r = await aiParseTodo(data.settings, q)
+    setAiParsing(false)
+    if (!r) {
+      toast('AI 没能解析出待办，试试把时间说得更明确些')
+      return
+    }
+    setTitle(r.title)
+    setTime(toInputValue(r.remindAt ?? Date.now() + 3600_000))
+    setRepeat(r.repeat ?? 'none')
+    setRepeatDays(r.repeatDays ? String(r.repeatDays) : '')
+    toast('已按描述填充，请确认后点添加')
+  }
 
   const submit = () => {
     const ts = time ? new Date(time).getTime() : NaN
@@ -391,6 +418,18 @@ export function TodosModal({ open, onClose }: { open: boolean; onClose: () => vo
           placeholder="要做什么？"
           className={`${inputCls} min-w-0 flex-1 !py-2 text-[13px]`}
         />
+        <button
+          type="button"
+          onClick={() => void aiFill()}
+          disabled={aiParsing}
+          aria-label="AI 解析"
+          title="AI 解析：用一句自然语言自动填充标题与到期时间"
+          className={`flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-[10px] border text-accent transition-all hover:border-accent/40 hover:bg-accent-soft active:scale-95 disabled:opacity-60 ${
+            aiParsing ? 'border-accent/40 bg-accent-soft' : 'border-line bg-surface'
+          }`}
+        >
+          <Sparkles width={15} height={15} className={aiParsing ? 'animate-pulse' : ''} />
+        </button>
         <button
           type="button"
           onClick={submit}

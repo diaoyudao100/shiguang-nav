@@ -24,7 +24,8 @@ export function registerAutoModelSaver(fn: (m: string) => void): void {
 }
 
 function endpointOf(settings: Settings): string {
-  const custom = settings.aiBaseURL.trim().replace(/\/+$/, '')
+  // 兜底：未经 migrate 的残缺 settings（如外部导入）也不至于抛错
+  const custom = (settings.aiBaseURL ?? '').trim().replace(/\/+$/, '')
   if (isOpenAi(settings)) {
     if (!custom) return 'https://api.openai.com/v1'
     // 未带版本段时自动补 /v1（兼容 api.openai.com、deepseek 等写法；bigmodel 等以 /v4 结尾的原样保留）
@@ -35,7 +36,7 @@ function endpointOf(settings: Settings): string {
 }
 
 function modelOf(settings: Settings): string {
-  const m = settings.aiModel.trim() || autoModel
+  const m = (settings.aiModel ?? '').trim() || autoModel
   if (m) return m
   return isOpenAi(settings) ? 'gpt-4o-mini' : 'gemini-2.0-flash'
 }
@@ -88,7 +89,7 @@ async function chat(settings: Settings, prompt: string, system: string): Promise
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         provider: settings.aiProvider ?? 'openai',
-        baseUrl: settings.aiBaseURL.trim(),
+        baseUrl: (settings.aiBaseURL ?? '').trim(),
         apiKey: key,
         model: modelOf(settings),
         system,
@@ -101,7 +102,7 @@ async function chat(settings: Settings, prompt: string, system: string): Promise
     if (!res.ok) throw new Error(data.error || `请求失败 (${res.status})`)
     if (!data.text) throw new Error('AI 未返回内容')
     // 后端自动纠正过模型：记住并持久化，后续请求直接用正确模型
-    if (data.model && data.model !== settings.aiModel.trim()) {
+    if (data.model && data.model !== (settings.aiModel ?? '').trim()) {
       autoModel = data.model
       try {
         autoModelSaver?.(data.model)
@@ -141,7 +142,7 @@ export async function aiListModels(settings: Settings): Promise<string[]> {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         provider: settings.aiProvider ?? 'openai',
-        baseUrl: settings.aiBaseURL.trim(),
+        baseUrl: (settings.aiBaseURL ?? '').trim(),
         apiKey: key,
       }),
     })
@@ -211,11 +212,61 @@ export async function aiSuggestSite(
 export async function aiDescribeSite(url: string, name: string, settings: Settings): Promise<string> {
   const prompt = `为网站「${name}」（${normalizeUrl(url)}，域名 ${hostOf(url)}）写一句中文简介，不超过 24 个字，直接输出简介本身，不要任何前后缀和标点引导。`
   const text = await chat(settings, prompt, '你是一个网址导航助手，只输出简介文本。')
-  const desc = text
-    .replace(/<think>[\s\S]*?<\/think>/gi, '')
-    .trim()
+  const desc = stripThink(text)
     .replace(/^["「『]|["」』]$/g, '')
     .trim()
   if (!desc) throw new Error('AI 未返回有效简介，请换一个模型试试')
   return desc.slice(0, 60)
+}
+
+/** 去掉推理类模型输出的 <think> 段落 */
+export function stripThink(text: string): string {
+  return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim()
+}
+
+/** 站内 AI 工作台各功能共用的通用对话入口 */
+export async function aiChat(settings: Settings, prompt: string, system: string): Promise<string> {
+  return chat(settings, prompt, system)
+}
+
+export interface ParsedTodo {
+  title: string
+  remindAt?: number
+  repeat?: 'none' | 'daily' | 'weekly' | 'ndays'
+  repeatDays?: number
+}
+
+/** 自然语言 → 结构化待办（解析失败返回 null），如「下周五下午3点复诊」 */
+export async function aiParseTodo(settings: Settings, text: string): Promise<ParsedTodo | null> {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const nowStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())} 星期${'日一二三四五六'[now.getDay()]}`
+  const prompt = [
+    `现在是 ${nowStr}。请把下面这句话解析成一条待办事项：`,
+    `「${text}」`,
+    '要求：',
+    '- title：待办标题（去掉日期时间等描述后的简洁短语，不超过 30 字）',
+    '- remindAtISO：到期时间，格式 YYYY-MM-DDTHH:mm；句中没提到时间就省略该字段',
+    '- repeat：daily（每天）/ weekly（每周）/ ndays（每 N 天）/ none，未提到则 none',
+    '- repeatDays：repeat 为 ndays 时的间隔天数',
+    '严格只输出一个 JSON：{"title":"...","remindAtISO":"...","repeat":"...","repeatDays":30}',
+  ].join('\n')
+  try {
+    const raw = await chat(settings, prompt, '你是一个日程解析器，只输出 JSON，不要输出任何其他内容。')
+    const json = stripThink(raw).match(/\{[\s\S]*\}/)
+    if (!json) return null
+    const obj = JSON.parse(json[0]) as { title?: string; remindAtISO?: string; repeat?: string; repeatDays?: number }
+    const title = String(obj.title || '').trim()
+    if (!title) return null
+    const out: ParsedTodo = { title: title.slice(0, 60) }
+    if (obj.remindAtISO) {
+      const ts = new Date(obj.remindAtISO).getTime()
+      if (!Number.isNaN(ts)) out.remindAt = ts
+    }
+    if (obj.repeat === 'daily' || obj.repeat === 'weekly' || obj.repeat === 'ndays') out.repeat = obj.repeat
+    if (out.repeat === 'ndays') out.repeatDays = Math.min(365, Math.max(1, Math.round(Number(obj.repeatDays)) || 30))
+    return out
+  } catch {
+    return null
+  }
 }
