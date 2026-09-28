@@ -12,6 +12,9 @@ import { LinkModal } from './components/LinkModal'
 import { CategoryModal } from './components/CategoryModal'
 import { DataModal } from './components/DataModal'
 import { SettingsModal, type Tab } from './components/SettingsModal'
+import { TodoBanner } from './components/TodoBanner'
+import { TodosModal } from './components/TodosModal'
+import { useTodoReminders } from './hooks/useTodoReminders'
 import { EmptyArt } from './components/EmptyArt'
 import { AuthPage } from './pages/AuthPage'
 import { useToast } from './components/Toast'
@@ -40,8 +43,30 @@ function Shell() {
   const [dataModal, setDataModal] = useState(false)
   const [settingsModal, setSettingsModal] = useState(false)
   const [settingsTab, setSettingsTab] = useState<Tab | null>(null)
+  const [todosOpen, setTodosOpen] = useState(false)
   /** 滚动到底部时取消内容区底部渐隐 */
   const [atBottom, setAtBottom] = useState(true)
+  const { items: bannerItems, complete, snooze, dismiss } = useTodoReminders()
+
+  // 快捷键 N：新建待办（输入框聚焦时不触发）
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.isComposing || e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key !== 'n' && e.key !== 'N') return
+      const el = document.activeElement
+      if (
+        el &&
+        (el.tagName === 'INPUT' ||
+          el.tagName === 'TEXTAREA' ||
+          el.tagName === 'SELECT' ||
+          (el as HTMLElement).isContentEditable)
+      )
+        return
+      setTodosOpen(true)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   // 滚动位置：未到底时给主内容区加底部渐隐 mask
   useEffect(() => {
@@ -108,6 +133,7 @@ function Shell() {
         search={{ scope, setScope, query, setQuery }}
         onAdd={() => openAdd(null)}
         onSettings={() => openSettings(null)}
+        onTodos={() => setTodosOpen(true)}
         onToggleSidebar={() => setSidebarOpen((v) => !v)}
         sortMode={sortMode}
         onToggleSort={() => setSortMode((v) => !v)}
@@ -184,7 +210,7 @@ function Shell() {
               </a>
             </div>
             <p className="mt-4 text-center text-[11px] tracking-wide text-ink2/50">
-              {data.settings.siteTitle?.trim() || '拾光导航'} · v2.7.0 · 本地优先，数据尽在掌控
+              {data.settings.siteTitle?.trim() || '拾光导航'} · v2.8.0 · 本地优先，数据尽在掌控
             </p>
           </footer>
         </main>
@@ -196,6 +222,16 @@ function Shell() {
         defaultCategoryId={linkModal.defaultCategoryId}
         onClose={() => setLinkModal({ open: false, site: null, defaultCategoryId: null })}
       />
+      {bannerItems.length > 0 && (
+        <TodoBanner
+          items={bannerItems}
+          onComplete={complete}
+          onSnooze={snooze}
+          onDismiss={dismiss}
+          onOpenManage={() => setTodosOpen(true)}
+        />
+      )}
+      <TodosModal open={todosOpen} onClose={() => setTodosOpen(false)} />
       <CategoryModal open={catModal} onClose={() => setCatModal(false)} />
       <DataModal open={dataModal} onClose={() => setDataModal(false)} />
       <SettingsModal

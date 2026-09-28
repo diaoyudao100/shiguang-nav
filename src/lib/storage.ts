@@ -1,4 +1,4 @@
-import type { Category, NavData, Note, Settings, Site, ThemeMode, TrashItem } from '../types'
+import type { Category, NavData, Note, Settings, Site, ThemeMode, Todo, TrashItem } from '../types'
 
 /**
  * 存储键升级为 v2：与旧版标签页（仍在读写 v1 的旧代码）完全隔离，
@@ -24,6 +24,9 @@ export const DEFAULT_SETTINGS: Settings = {
   monoIcons: false,
   oledBlack: false,
   searchEngine: 'bing',
+  todoNotify: true,
+  todoSound: true,
+  todoAdvanceDays: '7',
   aiProvider: 'openai',
   aiBaseURL: '',
   aiKey: '',
@@ -95,6 +98,7 @@ export function defaultData(): NavData {
     categories: SEED_CATEGORIES,
     sites: seedSites(),
     notes: [],
+    todos: [],
     trash: [],
     settings: { ...DEFAULT_SETTINGS },
   }
@@ -181,6 +185,13 @@ export function migrate(data: Partial<NavData>): NavData {
   settings.autoCommon = !!settings.autoCommon
   settings.monoIcons = !!settings.monoIcons
   settings.oledBlack = !!settings.oledBlack
+  settings.todoNotify = settings.todoNotify !== false
+  settings.todoSound = settings.todoSound !== false
+  settings.todoAdvanceDays = (['1', '3', '7', '15'] as const).includes(
+    settings.todoAdvanceDays as '1' | '3' | '7' | '15',
+  )
+    ? settings.todoAdvanceDays
+    : '7'
   const notes: Note[] = Array.isArray(data.notes)
     ? data.notes
         .filter((n) => n && typeof n.text === 'string')
@@ -190,6 +201,21 @@ export function migrate(data: Partial<NavData>): NavData {
           text: n.text || '',
           pinned: !!n.pinned,
           updatedAt: n.updatedAt || Date.now(),
+        }))
+    : []
+  const todos: Todo[] = Array.isArray(data.todos)
+    ? data.todos
+        .filter((t: Partial<Todo>) => t && typeof t.title === 'string' && typeof t.remindAt === 'number')
+        .map((t: Partial<Todo>, i: number) => ({
+          id: t.id || 't-' + i,
+          title: t.title!.slice(0, 60),
+          note: typeof t.note === 'string' ? t.note.slice(0, 200) : '',
+          remindAt: t.remindAt!,
+          done: !!t.done,
+          repeat: t.repeat === 'daily' || t.repeat === 'weekly' ? t.repeat : undefined,
+          remindedAt: typeof t.remindedAt === 'number' ? t.remindedAt : undefined,
+          snoozedUntil: typeof t.snoozedUntil === 'number' ? t.snoozedUntil : undefined,
+          createdAt: t.createdAt || Date.now(),
         }))
     : []
   // 回收站：结构修补 + 30 天自动过期
@@ -207,5 +233,5 @@ export function migrate(data: Partial<NavData>): NavData {
         }))
         .filter((t) => Date.now() - t.deletedAt < TRASH_TTL)
     : []
-  return { version: 1, categories, sites, settings, notes, trash }
+  return { version: 1, categories, sites, settings, notes, todos, trash }
 }

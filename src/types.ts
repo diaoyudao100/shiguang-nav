@@ -46,6 +46,9 @@ export interface Settings {
   monoIcons: boolean // 单色图标：favicon 转灰阶，悬浮恢复彩色（触屏保持单色）
   oledBlack: boolean // OLED 纯黑：深色模式下背景压到纯黑
   searchEngine: string
+  todoNotify: boolean // 待办进入提醒期后，页面在后台时同时弹系统通知（需浏览器授权）
+  todoSound: boolean // 待办提醒弹出时播放提示音
+  todoAdvanceDays: '1' | '3' | '7' | '15' // 到期前多少天开始提醒
   aiProvider: AiProvider
   aiBaseURL: string
   aiKey: string
@@ -60,6 +63,18 @@ export interface Note {
   updatedAt: number
 }
 
+export interface Todo {
+  id: string
+  title: string
+  note: string // 备注可选
+  remindAt: number // 到期时间戳（ms）：到期前 N 天开始每天提醒（N 见设置 todoAdvanceDays）
+  done: boolean
+  repeat?: 'none' | 'daily' | 'weekly' // 循环待办：完成后自动滚动到下一周期
+  remindedAt?: number // 最近一次提醒条处理（关闭/到期）时间，用于推算下个提醒节点
+  snoozedUntil?: number // 「稍后」暂停到的时间点，早于它不再弹
+  createdAt: number
+}
+
 export interface TrashItem {
   kind: 'site' | 'category'
   data: Site | Category
@@ -71,6 +86,7 @@ export interface NavData {
   categories: Category[]
   sites: Site[]
   notes: Note[]
+  todos?: Todo[] // 待办提醒：随账户云同步
   trash?: TrashItem[] // 最近删除：保留 30 天，可恢复
   settings: Settings
 }

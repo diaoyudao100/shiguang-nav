@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { ListTodo } from 'lucide-react'
 import type { Note } from '../types'
 import { useStore } from '../hooks/useStore'
 import { Modal } from './Modal'
@@ -34,7 +35,7 @@ export function NotesModal({
   /** 打开时定位到指定便签（来自站内搜索结果点击） */
   initialId?: string | null
 }) {
-  const { data, addNote, updateNote, updateNoteTitle, toggleNotePin, deleteNote } = useStore()
+  const { data, addNote, updateNote, updateNoteTitle, toggleNotePin, deleteNote, addTodo } = useStore()
   const toast = useToast()
   const confirm = useConfirm()
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -306,6 +307,27 @@ export function NotesModal({
                   预览
                 </button>
                 <span className="ml-auto flex items-center gap-0.5">
+                  <button
+                    type="button"
+                    title="转为待办（默认明天 9:00 到期，可再调整）"
+                    aria-label="转为待办"
+                    onClick={() => {
+                      const t = selected
+                      const firstLine = t.text.trim().split('\n')[0].trim()
+                      const title = (t.title.trim() || firstLine || '来自便签的待办').slice(0, 60)
+                      const note = (
+                        t.title.trim() ? t.text.trim() : t.text.trim().split('\n').slice(1).join(' ').trim()
+                      ).slice(0, 200)
+                      const d = new Date()
+                      d.setDate(d.getDate() + 1)
+                      d.setHours(9, 0, 0, 0)
+                      addTodo({ title, remindAt: d.getTime(), note })
+                      toast('已转为待办：明天 9:00 到期，可在待办事项中调整')
+                    }}
+                    className="rounded-lg p-1.5 text-ink2/70 transition-colors hover:bg-hover hover:text-ink"
+                  >
+                    <ListTodo width={14} height={14} />
+                  </button>
                   <button
                     type="button"
                     onClick={() => {

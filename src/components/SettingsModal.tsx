@@ -513,6 +513,87 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
               </button>
             </div>
           </div>
+          {/* 待办提醒 */}
+          <div className="border-t border-line pt-4">
+            <span className="mb-1.5 block text-xs font-medium text-ink2">待办提醒</span>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between rounded-xl border border-line bg-base px-4 py-3">
+                <div>
+                  <div className="text-sm font-medium">系统通知</div>
+                  <div className="mt-0.5 text-xs text-ink2">
+                    待办进入提醒期后，页面在后台也弹系统级通知（前台始终有页面内红色提醒条）
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  aria-label="待办系统通知"
+                  onClick={async () => {
+                    const v = !form.todoNotify
+                    setForm((f) => ({ ...f, todoNotify: v }))
+                    setSettings({ todoNotify: v })
+                    if (v && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+                      const r = await Notification.requestPermission()
+                      if (r !== 'granted') toast('浏览器未授权通知，仍会以页面内横幅提醒')
+                    } else if (v && typeof Notification !== 'undefined' && Notification.permission === 'denied') {
+                      toast('通知权限曾被拒绝，需在浏览器地址栏权限设置中允许')
+                    }
+                  }}
+                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                    form.todoNotify ? 'bg-accent' : 'bg-line'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                      form.todoNotify ? 'left-[22px]' : 'left-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+              <div className="flex items-center justify-between rounded-xl border border-line bg-base px-4 py-3">
+                <div>
+                  <div className="text-sm font-medium">提示音</div>
+                  <div className="mt-0.5 text-xs text-ink2">提醒条弹出时播放一声轻响</div>
+                </div>
+                <button
+                  type="button"
+                  aria-label="待办提示音"
+                  onClick={() => {
+                    const v = !form.todoSound
+                    setForm((f) => ({ ...f, todoSound: v }))
+                    setSettings({ todoSound: v })
+                  }}
+                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                    form.todoSound ? 'bg-accent' : 'bg-line'
+                  }`}
+                >
+                  <span
+                    className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                      form.todoSound ? 'left-[22px]' : 'left-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+              <Field label="提前提醒" hint="到期前多少天开始每天提醒">
+                <div className="flex gap-1 rounded-[10px] border border-line bg-base/60 p-1">
+                  {(['1', '3', '7', '15'] as const).map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => {
+                        setForm((f) => ({ ...f, todoAdvanceDays: d }))
+                        setSettings({ todoAdvanceDays: d })
+                      }}
+                      className={`h-8 flex-1 rounded-[7px] text-xs font-medium transition-all ${
+                        (form.todoAdvanceDays || '7') === d ? 'bg-surface text-ink shadow-sm' : 'text-ink2 hover:text-ink'
+                      }`}
+                    >
+                      {d} 天
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1052,7 +1133,7 @@ export function SettingsModal({ open, onClose, onOpenData, initialTab }: Setting
               />
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold">{form.siteTitle || '拾光导航'}</div>
-                <div className="mt-0.5 text-xs text-ink2">v2.7.0 · 个人网址导航</div>
+                <div className="mt-0.5 text-xs text-ink2">v2.8.0 · 个人网址导航</div>
               </div>
               <a
                 href="https://github.com/diaoyudao100/shiguang-nav"
