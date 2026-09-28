@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { ListTodo } from 'lucide-react'
+import { ListTodo, Sparkles } from 'lucide-react'
 import type { Note } from '../types'
 import { useStore } from '../hooks/useStore'
 import { Modal } from './Modal'
 import { IconChevronLeft, IconPin, IconPlus, IconStickyNote, IconTrash } from './icons'
 import { useToast } from './Toast'
 import { useConfirm } from './Confirm'
+import { aiChat, aiConfigured, stripThink } from '../lib/ai'
 
 const MAX_TITLE = 60
 const MAX_LEN = 2000
@@ -44,6 +45,56 @@ export function NotesModal({
   const [onlyPinned, setOnlyPinned] = useState(false)
   /** 移动端（<md）单栏切换：list=便签列表，editor=编辑器；桌面双栏常显不受影响 */
   const [mobilePane, setMobilePane] = useState<'list' | 'editor'>('list')
+
+  // —— 便签划词 AI：选中一段文字后用 润色/总结/翻译/续写 处理并写回 ——
+  const [aiAction, setAiAction] = useState<string | null>(null)
+  const [hasSel, setHasSel] = useState(false)
+  const aiActions: { id: string; label: string; sys: string; ask: (t: string) => string; insertAfter?: boolean }[] = [
+    { id: 'polish', label: '润色', sys: '你是中文文字润色助手，只输出润色后的文本，不要任何解释。', ask: (t: string) => `润色下面这段文字，保持原意，表达自然流畅：\n\n${t}` },
+    { id: 'sum', label: '总结', sys: '你是摘要助手，只输出摘要本身。', ask: (t: string) => `用一两句话总结下面这段文字：\n\n${t}` },
+    { id: 'trans', label: '翻译', sys: '你是翻译助手，只输出译文。', ask: (t: string) => `翻译下面这段文字（中文译成英文，外文译成中文）：\n\n${t}` },
+    { id: 'cont', label: '续写', sys: '你是写作助手，只输出续写的内容，不要重复原文。', ask: (t: string) => `顺着下面这段文字的语气和思路续写两三句话：\n\n${t}`, insertAfter: true },
+  ]
+  const syncSel = () => {
+    const ta = bodyRef.current
+    setHasSel(!!ta && ta.selectionStart !== ta.selectionEnd)
+  }
+  const runAi = async (a: (typeof aiActions)[number]) => {
+    const ta = bodyRef.current
+    if (!ta || !selected) return
+    const s = ta.selectionStart
+    const e = ta.selectionEnd
+    if (s === e) {
+      toast('先在正文里选中一段文字')
+      return
+    }
+    if (!aiConfigured(data.settings)) {
+      toast('请先在 设置 → AI 助手 中配置 API KEY')
+      return
+    }
+    const selText = ta.value.slice(s, e)
+    setAiAction(a.id)
+    try {
+      const out = stripThink(await aiChat(data.settings, a.ask(selText), a.sys))
+      if (!out) throw new Error('AI 未返回内容')
+      const v = ta.value
+      const next = a.insertAfter ? `${v.slice(0, e)}\n${out}${v.slice(e)}` : v.slice(0, s) + out + v.slice(e)
+      updateNote(selected.id, next)
+      const pos = a.insertAfter ? e + out.length + 1 : s + out.length
+      requestAnimationFrame(() => {
+        const box = bodyRef.current
+        if (box) {
+          box.focus()
+          box.setSelectionRange(pos, pos)
+        }
+      })
+      toast(`${a.label}完成`)
+    } catch (err) {
+      toast((err as Error).message || 'AI 调用失败')
+    } finally {
+      setAiAction(null)
+    }
+  }
   const pendingFocus = useRef<string | null>(null)
   const freshBlankId = useRef<string | null>(null) // 刚新建、允许暂时为空的那条
   const titleRef = useRef<HTMLInputElement>(null)
@@ -344,15 +395,44 @@ export function NotesModal({
                 </span>
               </div>
 
+              {/* 便签划词 AI：作用于正文中选中的文字 */}
+              {mode === 'edit' && (
+                <div className="mt-2 flex items-center gap-1.5">
+                  <span className="flex shrink-0 items-center gap-1 text-[11px] text-ink2/70">
+                    <Sparkles width={12} height={12} className="text-accent" />
+                    AI
+                  </span>
+                  {aiActions.map((a) => (
+                    <button
+                      key={a.id}
+                      type="button"
+                      onClick={() => void runAi(a)}
+                      disabled={aiAction !== null}
+                      className={`h-6 rounded-full px-2.5 text-[11px] transition-all disabled:opacity-50 ${
+                        aiAction === a.id
+                          ? 'bg-accent-soft font-medium text-accent'
+                          : 'border border-line bg-surface text-ink2 hover:border-line-strong hover:text-ink'
+                      }`}
+                    >
+                      {aiAction === a.id ? '…' : a.label}
+                    </button>
+                  ))}
+                  <span className="ml-auto truncate text-[10px] text-ink2/50">
+                    {hasSel ? '作用于选中文字' : '选中文字后可用'}
+                  </span>
+                </div>
+              )}
+
               {/* 内容区：独立浅灰圆角框 */}
               <div className="mt-2.5 min-h-0 flex-1 overflow-hidden rounded-xl border border-line bg-base/60">
                 {mode === 'edit' ? (
-                  <textarea
-                    ref={bodyRef}
-                    maxLength={MAX_LEN}
-                    value={selected.text}
-                    onChange={(e) => updateNote(selected.id, e.target.value)}
-                    placeholder="写点什么…（自动保存）"
+                <textarea
+                  ref={bodyRef}
+                  maxLength={MAX_LEN}
+                  value={selected.text}
+                  onChange={(e) => updateNote(selected.id, e.target.value)}
+                  onSelect={syncSel}
+                  placeholder="写点什么…（自动保存）"
                     className="h-full w-full resize-none bg-transparent px-4 py-3 text-[13px] leading-6 text-ink outline-none placeholder:text-ink2/45"
                   />
                 ) : (
