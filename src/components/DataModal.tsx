@@ -35,6 +35,7 @@ export function DataModal({ open, onClose }: { open: boolean; onClose: () => voi
       categories: data.categories,
       sites: data.sites,
       notes: data.notes,
+      todos: data.todos ?? [],
     }
     downloadFile(`nav-backup-${dateTag}.json`, JSON.stringify(backup, null, 2), 'application/json')
     toast('JSON 备份已导出')
@@ -59,6 +60,8 @@ export function DataModal({ open, onClose }: { open: boolean; onClose: () => voi
         categories: result.categories,
         sites: result.sites,
         notes: data.notes,
+        todos: data.todos,
+        trash: data.trash,
         settings: data.settings,
       }
       replaceAll(next)
@@ -78,7 +81,7 @@ export function DataModal({ open, onClose }: { open: boolean; onClose: () => voi
         return
       }
       if (mode === 'replace') {
-        replaceAll({ ...nav, settings: nav.settings ?? data.settings })
+        replaceAll({ ...nav, trash: data.trash, settings: nav.settings ?? data.settings })
         toast('已从备份恢复')
         onClose()
       } else {

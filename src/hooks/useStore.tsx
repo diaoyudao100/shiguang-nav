@@ -8,7 +8,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import type { Category, NavData, Note, Settings, Site } from '../types'
+import type { Category, NavData, Note, Settings, Site, Todo } from '../types'
 import { defaultData, loadData, migrate, saveData, STORAGE_KEY } from '../lib/storage'
 import { uid } from '../lib/id'
 import { normalizeUrl } from '../lib/favicon'
@@ -49,11 +49,18 @@ interface StoreCtx {
   updateNoteTitle: (id: string, title: string) => void
   toggleNotePin: (id: string) => void
   deleteNote: (id: string) => void
+  addTodo: (input: { title: string; remindAt: number; note?: string; repeat?: Todo['repeat'] }) => Todo
+  updateTodo: (id: string, patch: Partial<Omit<Todo, 'id'>>) => void
+  toggleTodoDone: (id: string) => void
+  deleteTodo: (id: string) => void
+  deleteDoneTodos: () => void
   restoreTrash: (id: string) => void
   restoreAllTrash: () => void
   purgeTrashItem: (id: string) => void
   emptyTrash: () => void
   forceSync: () => void
+  /** 拉取云端更新（仅在云端比本地新且本地无未同步修改时采用）——多设备同时开着页面时缓解重复提醒 */
+  pullIfNewer: () => void
 }
 
 const Ctx = createContext<StoreCtx | null>(null)
@@ -480,6 +487,51 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           d.notes = d.notes.filter((x) => x.id !== id)
           return d
         }),
+      addTodo: (input) => {
+        const todo: Todo = {
+          id: 't-' + uid(),
+          title: input.title.slice(0, 60),
+          note: (input.note ?? '').slice(0, 200),
+          remindAt: input.remindAt,
+          done: false,
+          repeat: input.repeat && input.repeat !== 'none' ? input.repeat : undefined,
+          createdAt: Date.now(),
+        }
+        mutate((d) => {
+          d.todos = [...(d.todos ?? []), todo]
+          return d
+        })
+        return todo
+      },
+      updateTodo: (id, patch) =>
+        mutate((d) => {
+          d.todos = (d.todos ?? []).map((t) => (t.id === id ? { ...t, ...patch } : t))
+          return d
+        }),
+      toggleTodoDone: (id) =>
+        mutate((d) => {
+          d.todos = (d.todos ?? []).map((t) => {
+            if (t.id !== id) return t
+            // 循环待办「完成」= 滚动到下一周期（每天 +1 天 / 每周 +7 天），并暂停提醒直到新到期时刻
+            if (!t.done && (t.repeat === 'daily' || t.repeat === 'weekly')) {
+              const step = t.repeat === 'daily' ? 86400_000 : 7 * 86400_000
+              const nextAt = t.remindAt + step
+              return { ...t, remindAt: nextAt, remindedAt: undefined, snoozedUntil: nextAt }
+            }
+            return { ...t, done: !t.done, remindedAt: !t.done ? (t.remindedAt ?? Date.now()) : undefined }
+          })
+          return d
+        }),
+      deleteTodo: (id) =>
+        mutate((d) => {
+          d.todos = (d.todos ?? []).filter((t) => t.id !== id)
+          return d
+        }),
+      deleteDoneTodos: () =>
+        mutate((d) => {
+          d.todos = (d.todos ?? []).filter((t) => !t.done)
+          return d
+        }),
       restoreTrash: (id) =>
         mutate((d) => {
           const item = (d.trash ?? []).find((t) => t.data.id === id)
@@ -539,6 +591,29 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             setSync({ state: 'error', time: Date.now(), cloud: true, errMsg: (e as Error).message })
           })
       },
+      pullIfNewer: () => {
+        // 静默拉取：只在云端比本地新、且本地没有未同步修改时采用（不打扰同步状态显示）
+        if (!user || applyingRemote.current) return
+        if (readSyncMeta().dirty) return
+        api
+          .getData()
+          .then((r) => {
+            if (!r.data || !r.updatedAt || applyingRemote.current) return
+            const meta = readSyncMeta()
+            if (r.updatedAt <= meta.lastCloudUpdatedAt) return
+            applyingRemote.current = true
+            const normalized = migrate(r.data)
+            const next = { ...normalized, settings: { ...normalized.settings, theme: dataRef.current.settings.theme } }
+            writeSyncMeta({ lastCloudUpdatedAt: r.updatedAt, dirty: false })
+            setData(next)
+            try {
+              saveData(next)
+            } catch {
+              /* ignore */
+            }
+          })
+          .catch(() => {})
+      },
     }
   }, [data, sync, mutate])
 
@@ -582,5 +657,10 @@ export function backupToNavData(raw: unknown): NavData | null {
           updatedAt: x.updatedAt ?? Date.now(),
         }))
       : fallback.notes,
+    todos: Array.isArray(obj.todos)
+      ? obj.todos.filter(
+          (x: Partial<Todo>) => x && typeof x.title === 'string' && typeof x.remindAt === 'number',
+        )
+      : [],
   }
 }
