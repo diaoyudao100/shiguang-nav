@@ -212,7 +212,12 @@ export function migrate(data: Partial<NavData>): NavData {
           note: typeof t.note === 'string' ? t.note.slice(0, 200) : '',
           remindAt: t.remindAt!,
           done: !!t.done,
-          repeat: t.repeat === 'daily' || t.repeat === 'weekly' ? t.repeat : undefined,
+          repeat:
+            t.repeat === 'daily' || t.repeat === 'weekly' || t.repeat === 'ndays' ? t.repeat : undefined,
+          repeatDays:
+            t.repeat === 'ndays' && (typeof t.repeatDays === 'number' || typeof t.repeatDays === 'string')
+              ? Math.min(365, Math.max(1, Math.round(Number(t.repeatDays)) || 30))
+              : undefined,
           remindedAt: typeof t.remindedAt === 'number' ? t.remindedAt : undefined,
           snoozedUntil: typeof t.snoozedUntil === 'number' ? t.snoozedUntil : undefined,
           createdAt: t.createdAt || Date.now(),

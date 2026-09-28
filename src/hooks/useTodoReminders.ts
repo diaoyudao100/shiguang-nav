@@ -3,6 +3,7 @@ import type { Todo } from '../types'
 import { useStore } from './useStore'
 import { useAuth } from './useAuth'
 import { useToast } from '../components/Toast'
+import { nextRemindAt } from '../lib/todo'
 
 export interface TodoBannerItem {
   todo: Todo
@@ -189,12 +190,9 @@ export function useTodoReminders() {
   const complete = useCallback(
     (id: string) => {
       const t = (dataRef.current.todos ?? []).find((x) => x.id === id)
-      const cycling = t && !t.done && (t.repeat === 'daily' || t.repeat === 'weekly')
+      const cycling = t && !t.done && t.repeat && t.repeat !== 'none'
       toggleTodoDone(id)
-      if (cycling && t) {
-        const step = t.repeat === 'daily' ? 86400_000 : 7 * 86400_000
-        toast(`已完成，下次到期 ${fmtWhen(t.remindAt + step)}`)
-      }
+      if (cycling && t) toast(`已完成，下次到期 ${fmtWhen(nextRemindAt(t))}`)
       rerun()
     },
     [toggleTodoDone, rerun, toast],

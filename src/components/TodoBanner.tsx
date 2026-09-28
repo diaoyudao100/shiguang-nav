@@ -1,6 +1,7 @@
 import { AlarmClock, BellRing, Check, X } from 'lucide-react'
 import type { Todo } from '../types'
 import type { TodoBannerItem } from '../hooks/useTodoReminders'
+import { repeatBadgeText } from '../lib/todo'
 
 function Row({
   item,
@@ -21,11 +22,10 @@ function Row({
       <button type="button" onClick={onOpenManage} title="点击管理待办" className="min-w-0 flex-1 text-left">
         <span className="flex items-center gap-2">
           <span className="truncate text-[13px] font-semibold">{todo.title}</span>
-          {todo.repeat === 'daily' && (
-            <span className="shrink-0 rounded-full bg-white/20 px-1.5 text-[10px] leading-4">每天</span>
-          )}
-          {todo.repeat === 'weekly' && (
-            <span className="shrink-0 rounded-full bg-white/20 px-1.5 text-[10px] leading-4">每周</span>
+          {repeatBadgeText(todo) && (
+            <span className="shrink-0 rounded-full bg-white/20 px-1.5 text-[10px] leading-4">
+              {repeatBadgeText(todo)}
+            </span>
           )}
         </span>
         <span className="mt-0.5 flex items-center gap-1.5 text-[11px] text-white/85">

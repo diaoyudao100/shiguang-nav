@@ -6,15 +6,19 @@ import { Modal, inputCls } from './Modal'
 import { SelectMenu } from './SelectMenu'
 import { useToast } from './Toast'
 import { useConfirm } from './Confirm'
+import { REPEAT_OPTS, nextRemindAt, normalizeRepeatDays, repeatBadgeText } from '../lib/todo'
 
 const MAX_TITLE = 60
 const MAX_NOTE = 200
 
-const REPEAT_OPTS = [
-  { value: 'none', label: '不重复' },
-  { value: 'daily', label: '每天' },
-  { value: 'weekly', label: '每周' },
-] as const
+/** 重复下拉选项：「每 N 天」的标签跟随当前天数 */
+function repeatOptions(days: string) {
+  return REPEAT_OPTS.map((o) =>
+    o.value === 'ndays'
+      ? { value: o.value, label: days ? `每 ${normalizeRepeatDays(days)} 天` : '每 N 天' }
+      : { value: o.value, label: o.label },
+  )
+}
 
 function pad(n: number): string {
   return String(n).padStart(2, '0')
@@ -53,8 +57,15 @@ export function TodosModal({ open, onClose }: { open: boolean; onClose: () => vo
   const [title, setTitle] = useState('')
   const [time, setTime] = useState('')
   const [repeat, setRepeat] = useState<Todo['repeat']>('none')
+  const [repeatDays, setRepeatDays] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [draft, setDraft] = useState<{ title: string; note: string; time: string; repeat: Todo['repeat'] } | null>(null)
+  const [draft, setDraft] = useState<{
+    title: string
+    note: string
+    time: string
+    repeat: Todo['repeat']
+    repeatDays: string
+  } | null>(null)
 
   const defaultTime = () => {
     const d = new Date(Date.now() + 3600_000)
@@ -68,6 +79,7 @@ export function TodosModal({ open, onClose }: { open: boolean; onClose: () => vo
       setTitle('')
       setTime(defaultTime())
       setRepeat('none')
+      setRepeatDays('')
       setEditingId(null)
       setDraft(null)
     }
@@ -94,10 +106,11 @@ export function TodosModal({ open, onClose }: { open: boolean; onClose: () => vo
       toast('请选择到期时间')
       return
     }
-    addTodo({ title: title.trim(), remindAt: ts, repeat })
+    addTodo({ title: title.trim(), remindAt: ts, repeat, repeatDays: Number(repeatDays) })
     setTitle('')
     setTime(defaultTime())
     setRepeat('none')
+    setRepeatDays('')
     toast(
       Date.now() - adv * 86400_000 <= ts
         ? `已添加，到期前 ${adv} 天开始提醒`
@@ -107,7 +120,13 @@ export function TodosModal({ open, onClose }: { open: boolean; onClose: () => vo
 
   const startEdit = (t: Todo) => {
     setEditingId(t.id)
-    setDraft({ title: t.title, note: t.note, time: toInputValue(t.remindAt), repeat: t.repeat ?? 'none' })
+    setDraft({
+      title: t.title,
+      note: t.note,
+      time: toInputValue(t.remindAt),
+      repeat: t.repeat ?? 'none',
+      repeatDays: t.repeat === 'ndays' ? String(normalizeRepeatDays(t.repeatDays)) : '',
+    })
   }
 
   const saveEdit = () => {
@@ -127,6 +146,7 @@ export function TodosModal({ open, onClose }: { open: boolean; onClose: () => vo
       note: draft.note.trim(),
       remindAt: ts,
       repeat: draft.repeat,
+      repeatDays: draft.repeat === 'ndays' ? normalizeRepeatDays(draft.repeatDays) : undefined,
       remindedAt: undefined,
       snoozedUntil: undefined,
     })
@@ -207,12 +227,10 @@ export function TodosModal({ open, onClose }: { open: boolean; onClose: () => vo
       </div>
     ) : null
 
-  const repeatBadge = (t: Todo) =>
-    t.repeat === 'daily' ? (
-      <span className="shrink-0 text-[10px] font-normal text-accent">每天</span>
-    ) : t.repeat === 'weekly' ? (
-      <span className="shrink-0 text-[10px] font-normal text-accent">每周</span>
-    ) : null
+  const repeatBadge = (t: Todo) => {
+    const text = repeatBadgeText(t)
+    return text ? <span className="shrink-0 text-[10px] font-normal text-accent">{text}</span> : null
+  }
 
   const row = (t: Todo, muted: boolean) => {
     const editing = editingId === t.id
@@ -243,11 +261,24 @@ export function TodosModal({ open, onClose }: { open: boolean; onClose: () => vo
             <SelectMenu
               value={draft.repeat ?? 'none'}
               onChange={(v) => setDraft({ ...draft, repeat: v as Todo['repeat'] })}
-              options={REPEAT_OPTS.map((o) => ({ value: o.value, label: o.label }))}
+              options={repeatOptions(draft.repeatDays)}
               variant="compact"
               className="h-[30px] w-[104px] shrink-0 text-xs"
               ariaLabel="重复"
             />
+            {draft.repeat === 'ndays' && (
+              <input
+                type="number"
+                min={1}
+                max={365}
+                value={draft.repeatDays}
+                onChange={(e) => setDraft({ ...draft, repeatDays: e.target.value })}
+                aria-label="重复间隔天数"
+                placeholder="34"
+                className={`${inputCls} !w-[68px] shrink-0 !px-2 !py-1.5 text-center text-xs tabular-nums`}
+              />
+            )}
+            {draft.repeat === 'ndays' && <span className="text-xs text-ink2">天</span>}
             <button
               type="button"
               onClick={saveEdit}
@@ -280,12 +311,9 @@ export function TodosModal({ open, onClose }: { open: boolean; onClose: () => vo
           type="button"
           aria-label={t.done ? '标记为未完成' : '标记为已完成'}
           onClick={() => {
-            const cycling = !t.done && (t.repeat === 'daily' || t.repeat === 'weekly')
+            const cycling = !t.done && t.repeat && t.repeat !== 'none'
             toggleTodoDone(t.id)
-            if (cycling) {
-              const step = t.repeat === 'daily' ? 86400_000 : 7 * 86400_000
-              toast(`已完成，下次到期 ${fmtWhen(t.remindAt + step)}`)
-            }
+            if (cycling) toast(`已完成，下次到期 ${fmtWhen(nextRemindAt(t))}`)
           }}
           className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all ${
             t.done
@@ -373,7 +401,7 @@ export function TodosModal({ open, onClose }: { open: boolean; onClose: () => vo
           <span className="hidden sm:inline">添加</span>
         </button>
       </div>
-      <div className="mt-1.5 flex items-center gap-1.5">
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
         <input
           type="datetime-local"
           value={time}
@@ -385,13 +413,32 @@ export function TodosModal({ open, onClose }: { open: boolean; onClose: () => vo
         <SelectMenu
           value={repeat ?? 'none'}
           onChange={(v) => setRepeat(v as Todo['repeat'])}
-          options={REPEAT_OPTS.map((o) => ({ value: o.value, label: o.label }))}
+          options={repeatOptions(repeatDays)}
           variant="compact"
           className="h-[38px] w-[112px] shrink-0 text-xs"
           ariaLabel="重复"
         />
+        {repeat === 'ndays' && (
+          <input
+            type="number"
+            min={1}
+            max={365}
+            value={repeatDays}
+            onChange={(e) => setRepeatDays(e.target.value)}
+            aria-label="重复间隔天数"
+            placeholder="34"
+            className={`${inputCls} !w-[68px] shrink-0 !px-2 !py-2 text-center text-xs tabular-nums`}
+          />
+        )}
+        {repeat === 'ndays' && <span className="shrink-0 text-xs text-ink2">天</span>}
         <span className="min-w-0 flex-1 truncate text-[11px] text-ink2/55">
-          {repeat === 'daily' ? '完成后自动滚动到明天' : repeat === 'weekly' ? '完成后自动滚动到下周' : `到期前 ${adv} 天开始提醒`}
+          {repeat === 'daily'
+            ? '完成后自动滚动到明天'
+            : repeat === 'weekly'
+              ? '完成后自动滚动到下周'
+              : repeat === 'ndays'
+                ? `完成后自动滚动到 ${normalizeRepeatDays(repeatDays)} 天后`
+                : `到期前 ${adv} 天开始提醒`}
         </span>
       </div>
 

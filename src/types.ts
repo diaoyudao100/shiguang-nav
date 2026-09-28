@@ -69,7 +69,8 @@ export interface Todo {
   note: string // 备注可选
   remindAt: number // 到期时间戳（ms）：到期前 N 天开始每天提醒（N 见设置 todoAdvanceDays）
   done: boolean
-  repeat?: 'none' | 'daily' | 'weekly' // 循环待办：完成后自动滚动到下一周期
+  repeat?: 'none' | 'daily' | 'weekly' | 'ndays' // 循环待办：完成后自动滚动到下一周期（ndays = 每 N 天，见 repeatDays）
+  repeatDays?: number // repeat 为 ndays 时的间隔天数（1-365）
   remindedAt?: number // 最近一次提醒条处理（关闭/到期）时间，用于推算下个提醒节点
   snoozedUntil?: number // 「稍后」暂停到的时间点，早于它不再弹
   createdAt: number
