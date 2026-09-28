@@ -12,6 +12,7 @@ import type { Category, NavData, Note, Settings, Site, Todo } from '../types'
 import { defaultData, loadData, migrate, saveData, STORAGE_KEY } from '../lib/storage'
 import { uid } from '../lib/id'
 import { normalizeUrl } from '../lib/favicon'
+import { nextRemindAt, normalizeRepeatDays } from '../lib/todo'
 import { api } from '../lib/api'
 import { registerAutoModelSaver } from '../lib/ai'
 import { useAuth } from './useAuth'
@@ -49,7 +50,7 @@ interface StoreCtx {
   updateNoteTitle: (id: string, title: string) => void
   toggleNotePin: (id: string) => void
   deleteNote: (id: string) => void
-  addTodo: (input: { title: string; remindAt: number; note?: string; repeat?: Todo['repeat'] }) => Todo
+  addTodo: (input: { title: string; remindAt: number; note?: string; repeat?: Todo['repeat']; repeatDays?: number }) => Todo
   updateTodo: (id: string, patch: Partial<Omit<Todo, 'id'>>) => void
   toggleTodoDone: (id: string) => void
   deleteTodo: (id: string) => void
@@ -495,6 +496,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           remindAt: input.remindAt,
           done: false,
           repeat: input.repeat && input.repeat !== 'none' ? input.repeat : undefined,
+          repeatDays:
+            input.repeat === 'ndays' ? normalizeRepeatDays(input.repeatDays ?? 30) : undefined,
           createdAt: Date.now(),
         }
         mutate((d) => {
@@ -512,11 +515,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         mutate((d) => {
           d.todos = (d.todos ?? []).map((t) => {
             if (t.id !== id) return t
-            // 循环待办「完成」= 滚动到下一周期（每天 +1 天 / 每周 +7 天），并暂停提醒直到新到期时刻
-            if (!t.done && (t.repeat === 'daily' || t.repeat === 'weekly')) {
-              const step = t.repeat === 'daily' ? 86400_000 : 7 * 86400_000
-              const nextAt = t.remindAt + step
-              return { ...t, remindAt: nextAt, remindedAt: undefined, snoozedUntil: nextAt }
+            // 循环待办「完成」= 滚动到下一周期（每天 / 每周 / 每 N 天），并暂停提醒直到新到期时刻
+            if (!t.done && t.repeat && t.repeat !== 'none') {
+              return {
+                ...t,
+                remindAt: nextRemindAt(t),
+                remindedAt: undefined,
+                snoozedUntil: nextRemindAt(t),
+              }
             }
             return { ...t, done: !t.done, remindedAt: !t.done ? (t.remindedAt ?? Date.now()) : undefined }
           })

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Bell, ChevronRight } from 'lucide-react'
 import { useStore } from '../hooks/useStore'
+import { repeatBadgeText } from '../lib/todo'
 import { useTheme } from '../hooks/useTheme'
 import { useAuth } from '../hooks/useAuth'
 import { AccountMenu } from './AccountMenu'
@@ -169,8 +170,9 @@ function TodoBell({ onOpen, pending }: { onOpen: () => void; pending: number }) 
               >
                 <span className="block truncate text-[13px] font-medium text-ink">
                   {t.title}
-                  {t.repeat === 'daily' && <span className="ml-1.5 text-[10px] font-normal text-accent">每天</span>}
-                  {t.repeat === 'weekly' && <span className="ml-1.5 text-[10px] font-normal text-accent">每周</span>}
+                  {repeatBadgeText(t) && (
+                    <span className="ml-1.5 text-[10px] font-normal text-accent">{repeatBadgeText(t)}</span>
+                  )}
                 </span>
                 <span className={`text-[11px] tabular-nums ${overdue ? 'font-medium text-danger' : 'text-ink2/60'}`}>
                   {overdue ? '已过期 · ' : ''}
