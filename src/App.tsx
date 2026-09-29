@@ -70,13 +70,27 @@ function Shell() {
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // 快捷键 Ctrl/Cmd+K：万能框
+  // 快捷键 Ctrl/Cmd+K 或 Q（左手单键）：万能框（输入框聚焦时不触发单键）
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === 'k' || e.key === 'K')) {
+      if (e.isComposing || e.altKey || e.shiftKey) return
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
         e.preventDefault()
         setPaletteOpen((v) => !v)
+        return
       }
+      if (e.metaKey || e.ctrlKey) return
+      if (e.key !== 'q' && e.key !== 'Q') return
+      const el = document.activeElement
+      if (
+        el &&
+        (el.tagName === 'INPUT' ||
+          el.tagName === 'TEXTAREA' ||
+          el.tagName === 'SELECT' ||
+          (el as HTMLElement).isContentEditable)
+      )
+        return
+      setPaletteOpen(true)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

@@ -207,6 +207,19 @@ export function CommandPalette({ open, onClose, onAddLink }: { open: boolean; on
               setCursor(0)
             }}
             onKeyDown={(e) => {
+              // Q 智能切换：搜索框为空时按 Q 直接关闭（有输入内容时正常输入字母 q）
+              if (
+                (e.key === 'q' || e.key === 'Q') &&
+                !e.ctrlKey &&
+                !e.metaKey &&
+                !e.altKey &&
+                !e.nativeEvent.isComposing &&
+                q.trim() === ''
+              ) {
+                e.preventDefault()
+                onClose()
+                return
+              }
               if (e.key === 'ArrowDown') {
                 e.preventDefault()
                 setCursor((c) => (items.length ? (c + 1) % items.length : 0))
