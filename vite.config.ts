@@ -7,8 +7,9 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // 开发时把 API 转发给 wrangler（8787），保持与部署形态一致
-      '/api': 'http://localhost:8787',
+      // 开发时把 API 转发给 wrangler。本机 8787 落在 Windows 保留端口段（8772-8871，
+      // wrangler 绑定报 #10013），因此本地后端固定用 8900：npx wrangler dev --port 8900
+      '/api': 'http://localhost:8900',
     },
   },
 })
